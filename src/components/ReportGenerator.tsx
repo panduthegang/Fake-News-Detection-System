@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
-import { Share2, Badge, Check, Copy, FileText } from 'lucide-react';
+import { FileDown, Share2, Badge, Check, Copy, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { AnalysisResult } from '@/utils/types';
+import * as htmlToImage from 'html-to-image';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ExternalHyperlink } from 'docx';
 import { saveAs } from 'file-saver';
 
