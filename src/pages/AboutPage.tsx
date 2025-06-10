@@ -10,7 +10,7 @@ const teamMembers = [
   {
     name: 'Alex Chen',
     role: 'AI Engineer & Team Lead',
-    image: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&q=80&w=200&h=200',
+    image: 'https://github.com/panduthegang/SkyStore LandingPage/blob/main/public/Harsh%20Rathod.jpg',
     social: {
       linkedin: 'https://linkedin.com',
       github: 'https://github.com',
