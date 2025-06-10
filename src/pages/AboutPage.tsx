@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 const teamMembers = [
   {
-    name: 'Harsh Rathod',
+    name: 'Alex Chen',
     role: 'AI Engineer & Team Lead',
     image: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&q=80&w=200&h=200',
     social: {
@@ -18,13 +18,23 @@ const teamMembers = [
     }
   },
   {
-    name: 'Pooja Purohit',
+    name: 'Sarah Miller',
     role: 'UI/UX Designer',
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200',
     social: {
       linkedin: 'https://linkedin.com',
       github: 'https://github.com',
       email: 'mailto:sarah@verifai.ai'
+    }
+  },
+  {
+    name: 'David Park',
+    role: 'Full Stack Developer',
+    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200',
+    social: {
+      linkedin: 'https://linkedin.com',
+      github: 'https://github.com',
+      email: 'mailto:david@verifai.ai'
     }
   }
 ];
