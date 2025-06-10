@@ -51,7 +51,6 @@ export const ArticleAnalysisPage: React.FC = () => {
   const [extractedText, setExtractedText] = useState<string>('');
   const [sparkles, setSparkles] = useState([]);
 
-  // Sparkles effect from HomePage
   useEffect(() => {
     const generateSparkles = () => {
       const newSparkles = [];
@@ -226,7 +225,6 @@ export const ArticleAnalysisPage: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      {/* Background copied from HomePage.tsx */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80" />
       
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-50 transition-opacity duration-300" />
@@ -262,7 +260,7 @@ export const ArticleAnalysisPage: React.FC = () => {
                 asChild
                 className="flex items-center gap-2"
               >
-                <Link to="/" state={{ skipLanding: true }}>
+                <Link to="/">
                   <ArrowLeft className="h-4 w-4" />
                   {t('common.back')}
                 </Link>
@@ -468,12 +466,15 @@ export const ArticleAnalysisPage: React.FC = () => {
                       {t('articleAnalysis.extractedText')}
                     </h2>
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p 
-                        className="whitespace-pre-line text-foreground"
-                        style={{ whiteSpace: 'pre-line' }}
-                      >
-                        {extractedText}
-                      </p>
+                      {extractedText.split('\n').map((paragraph, index) => (
+                        <React.Fragment key={index}>
+                          {paragraph.trim() && (
+                            <p className="mb-4 leading-relaxed text-foreground whitespace-pre-line">
+                              {paragraph}
+                            </p>
+                          )}
+                        </React.Fragment>
+                      ))}
                     </div>
                   </div>
 
@@ -610,7 +611,7 @@ export const ArticleAnalysisPage: React.FC = () => {
                       {/* Export Options */}
                       <div className="border-t border-border pt-6">
                         <h3 className="text-lg font-semibold mb-4">{t('results.export')}</h3>
-                        <ReportGenerator result={result} text={extractedText} />
+                        <ReportGenerator result={result} text={extractedText} imageUrl={imagePreview} />
                       </div>
                     </div>
                   </div>
