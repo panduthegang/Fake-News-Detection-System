@@ -1,21 +1,26 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
-import { Menu, History, Sun, Moon, Info, Zap } from 'lucide-react';
+import { Menu, History, Sun, Moon, Info, Zap, ArrowLeft } from 'lucide-react';
 import { useTheme } from './theme-provider';
 import { cn } from '@/lib/utils';
 
 interface MobileSidebarProps {
   showHistory: boolean;
   onHistoryClick: () => void;
+  onBackHome?: () => void;
 }
 
 export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   showHistory,
   onHistoryClick,
+  onBackHome
 }) => {
   const { theme, setTheme } = useTheme();
+  const location = useLocation();
+  const isAboutPage = location.pathname === '/about';
+  const isAnalyzerVisible = !isAboutPage && onBackHome;
 
   return (
     <Sheet>
@@ -41,17 +46,43 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           {/* Navigation */}
           <div className="flex-1 px-2">
             <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className={cn(
-                  'w-full justify-start gap-2 h-11',
-                  showHistory && 'bg-accent/50 backdrop-blur-sm'
-                )}
-                onClick={onHistoryClick}
-              >
-                <History className="h-4 w-4" />
-                Analysis History
-              </Button>
+              {isAnalyzerVisible && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 h-11"
+                  onClick={onBackHome}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Home
+                </Button>
+              )}
+
+              {isAboutPage && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 h-11"
+                  asChild
+                >
+                  <Link to="/">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Analysis
+                  </Link>
+                </Button>
+              )}
+
+              {!isAboutPage && (
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'w-full justify-start gap-2 h-11',
+                    showHistory && 'bg-accent/50 backdrop-blur-sm'
+                  )}
+                  onClick={onHistoryClick}
+                >
+                  <History className="h-4 w-4" />
+                  Analysis History
+                </Button>
+              )}
 
               <Button
                 variant="ghost"
