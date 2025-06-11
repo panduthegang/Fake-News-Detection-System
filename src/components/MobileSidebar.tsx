@@ -140,7 +140,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 >
                   <Link to="/social">
                     <MessageCircle className="h-4 w-4" />
-                    Social
+                    Community Feed
                   </Link>
                 </Button>
               )}
