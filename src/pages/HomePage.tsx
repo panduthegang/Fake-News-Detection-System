@@ -20,6 +20,7 @@ import {
   Camera, 
   Newspaper,
   Brain,
+  MessageCircle,
   BarChart2
 } from 'lucide-react';
 import { analyzeText } from '@/utils/newsAnalyzer';
@@ -382,6 +383,16 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                       >
                         <Link to="/news">
                           <Newspaper className="h-5 w-5" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        className="relative"
+                      >
+                        <Link to="/social">
+                          <MessageCircle className="h-5 w-5" />
                         </Link>
                       </Button>
                       <Button variant="ghost" size="icon" asChild>
