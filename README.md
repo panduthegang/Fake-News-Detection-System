@@ -166,5 +166,5 @@ We welcome contributions! Please follow these steps:
 ---
 
 <div align="center">
-  <p>Built with ❤️ by the Verifai Team</p>
+  <p>Built with ❤️ by the AI Guardians Team</p>
 </div>
