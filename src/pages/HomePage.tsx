@@ -66,6 +66,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   const [showLandingPage, setShowLandingPage] = useState(showLanding);
   const [sparkles, setSparkles] = useState([]);
   const [isListening, setIsListening] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,12 +82,13 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   }, [user]);
 
   const loadHistory = async () => {
-    if (!user) return;
+    if (!user || !user.uid) return;
     try {
       const userHistory = await getAnalysisHistory(user.uid);
       setHistory(userHistory);
     } catch (error) {
       console.error('Error loading history:', error);
+      setErrorMessage('Failed to load history. Please try again.');
     }
   };
 
@@ -207,6 +209,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
       await loadHistory();
     } catch (error) {
       console.error('Analysis failed:', error);
+      setErrorMessage('Analysis failed. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -223,6 +226,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
       setText('');
     } catch (error) {
       console.error('Analysis failed:', error);
+      setErrorMessage('Analysis failed. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -253,6 +257,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
       alert('Analysis copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy:', err);
+      setErrorMessage('Failed to copy analysis to clipboard.');
     }
   };
 
@@ -264,12 +269,22 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   };
 
   const handleHistoryDelete = async (id: string) => {
-    if (!user) return;
+    if (!user || !user.uid) {
+      setErrorMessage('User not authenticated. Please sign in again.');
+      return;
+    }
     try {
+      console.log(`Attempting to delete analysis with ID: ${id} for user: ${user.uid}`);
       await deleteAnalysis(user.uid, id);
+      console.log(`Firestore deletion successful for ID: ${id}`);
+      // Only update UI after successful Firestore deletion
       setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
+      setErrorMessage(null); // Clear any previous error
     } catch (error) {
       console.error('Error deleting analysis:', error);
+      setErrorMessage('Failed to delete analysis from Firestore. Please try again.');
+      // Revert UI if deletion fails (optional, depending on UX preference)
+      await loadHistory(); // Reload history to sync with Firestore
     }
   };
 
@@ -313,6 +328,12 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
           >
             <div className="container mx-auto px-4 py-8">
               <div className="max-w-5xl mx-auto">
+                {errorMessage && (
+                  <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive-foreground">
+                    {errorMessage}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mb-8">
                   <Button
                     variant="ghost"
