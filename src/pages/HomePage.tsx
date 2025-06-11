@@ -1,3 +1,4 @@
+// Import necessary dependencies from React and external libraries
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -46,11 +47,14 @@ import { UserNav } from '@/components/UserNav';
 import { useAuth } from '@/components/AuthProvider';
 import { saveAnalysis, getAnalysisHistory, deleteAnalysis } from '@/lib/firestore';
 
+// Define props interface for the HomePage component
 interface HomePageProps {
   showLanding?: boolean;
 }
 
+// HomePage component: Main entry point for the content analysis application
 export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
+  // Initialize hooks for translation, authentication, and navigation
   const { t } = useTranslation();
   const { user } = useAuth();
   const [text, setText] = useState('');
@@ -70,18 +74,22 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Effect to handle initial page setup and load user history
   useEffect(() => {
+    // Check if user prefers to skip landing page
     const skipLanding = localStorage.getItem('skipLanding') === 'true';
     if (skipLanding) {
       setShowLandingPage(false);
       setShowAnalyzer(true);
     }
 
+    // Load analysis history for authenticated user
     if (user) {
       loadHistory();
     }
   }, [user]);
 
+  // Function to fetch analysis history from Firestore
   const loadHistory = async () => {
     if (!user || !user.uid) return;
     try {
@@ -93,12 +101,14 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     }
   };
 
+  // Handler to transition from landing page to analyzer
   const handleStartAnalyzing = () => {
     setShowLandingPage(false);
     setShowAnalyzer(true);
     localStorage.setItem('skipLanding', 'true');
   };
 
+  // Effect to generate animated sparkles for visual effect
   useEffect(() => {
     const generateSparkles = () => {
       const newSparkles = [];
@@ -150,6 +160,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Effect to animate sparkles movement
   useEffect(() => {
     if (sparkles.length === 0) return;
     
@@ -184,12 +195,14 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     };
   }, [sparkles]);
 
+  // Handler for text input changes
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
     setCharCount(newText.length);
   };
 
+  // Handler to analyze input text and save results
   const handleAnalysis = async () => {
     if (!text.trim() || !user) return;
     
@@ -216,6 +229,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     }
   };
 
+  // Handler to add text for comparison mode
   const handleAddComparison = async () => {
     if (!text.trim()) return;
     
@@ -233,6 +247,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     }
   };
 
+  // Handler to share analysis results via clipboard
   const handleShare = async () => {
     if (!result) return;
     
@@ -262,6 +277,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     }
   };
 
+  // Handler to select a historical analysis
   const handleHistorySelect = (analysis: HistoricalAnalysis) => {
     setText(analysis.text);
     setResult(analysis.result);
@@ -269,6 +285,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     setShowHistory(false);
   };
 
+  // Handler to delete a historical analysis
   const handleHistoryDelete = async (id: string) => {
     if (!user || !user.uid) {
       setErrorMessage('User not authenticated. Please sign in again.');
@@ -289,8 +306,10 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     }
   };
 
+  // Render the main UI
   return (
     <div className="min-h-screen relative">
+      {/* Background layers for visual styling */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80" />
       
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-50 transition-opacity duration-300" />
@@ -299,6 +318,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
       
       <div className="fixed inset-0" />
       
+      {/* Sparkle effect layer */}
       <div className="fixed inset-0 pointer-events-none z-10">
         {sparkles.map(sparkle => (
           <div
@@ -317,6 +337,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
         ))}
       </div>
 
+      {/* Conditional rendering of landing page or analyzer */}
       {showLandingPage ? (
         <LandingPage onStartAnalyzing={handleStartAnalyzing} />
       ) : (
@@ -329,12 +350,14 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
           >
             <div className="container mx-auto px-4 py-8">
               <div className="max-w-5xl mx-auto">
+                {/* Display error messages if any */}
                 {errorMessage && (
                   <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive-foreground">
                     {errorMessage}
                   </div>
                 )}
 
+                {/* Header with navigation controls */}
                 <div className="flex items-center justify-between mb-8">
                   <Button
                     variant="ghost"
@@ -352,6 +375,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                   
                   <div className="flex items-center gap-4">
                     <div className="hidden md:flex items-center gap-2">
+                      {/* History button with notification badge */}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -365,6 +389,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                           </span>
                         )}
                       </Button>
+                      {/* Navigation links */}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -404,6 +429,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                       <ThemeToggle />
                       <UserNav />
                     </div>
+                    {/* Mobile sidebar for smaller screens */}
                     <div className="md:hidden">
                       <MobileSidebar
                         showHistory={showHistory}
@@ -418,6 +444,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                   </div>
                 </div>
 
+                {/* Main title section */}
                 <motion.div 
                   className="text-center mb-12"
                   initial={{ opacity: 0, y: -20 }}
@@ -438,6 +465,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                 </motion.div>
 
                 <div className="space-y-8">
+                  {/* History panel */}
                   <AnimatePresence>
                     {showHistory && (
                       <motion.div
@@ -455,6 +483,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                     )}
                   </AnimatePresence>
 
+                  {/* Text input and analysis controls */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -568,6 +597,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                     </div>
                   </motion.div>
 
+                  {/* Comparison mode controls */}
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -602,6 +632,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                     )}
                   </motion.div>
 
+                  {/* Comparison mode results */}
                   {comparisonMode && comparisonResults.length > 0 && (
                     <div className="space-y-8">
                       <SimilarityMatrix
@@ -627,6 +658,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                     </div>
                   )}
 
+                  {/* Help section */}
                   <AnimatePresence>
                     {showHelp && (
                       <motion.div
@@ -646,6 +678,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                     )}
                   </AnimatePresence>
 
+                  {/* Analysis results */}
                   <AnimatePresence mode="wait">
                     {isAnalyzing && (
                       <motion.div

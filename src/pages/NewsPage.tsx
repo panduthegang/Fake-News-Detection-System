@@ -1,3 +1,4 @@
+// Import React hooks, router, animations, date formatting, translation, and Firebase utilities
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +27,9 @@ import {
   Image as ImageIcon,
   Tag,
   Volume2,
-  VolumeX
+  VolumeX,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -40,8 +43,24 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { UserNav } from '@/components/UserNav'; // Placeholder import - adjust path as needed
+import { UserNav } from '@/components/UserNav';
+import { useAuth } from '@/components/AuthProvider';
+import { cn } from '@/lib/utils';
+import { 
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  onSnapshot,
+  where,
+  getDocs,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
+// Define interface for NewsItem data structure
 interface NewsItem {
   title: string;
   link: string;
@@ -56,11 +75,13 @@ interface NewsItem {
   category?: string;
 }
 
+// Define interface for SpeechState to manage text-to-speech functionality
 interface SpeechState {
   isPlaying: boolean;
   currentArticleId: string | null;
 }
 
+// Define RSS feeds with their URLs, names, icons, and categories
 const RSS_FEEDS = [
   {
     url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
@@ -118,8 +139,10 @@ const RSS_FEEDS = [
   }
 ];
 
+// Define CORS proxy for fetching RSS feeds
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
+// Function to infer news category based on title and content keywords
 const inferCategory = (title: string, content: string): string => {
   const text = (title + ' ' + content).toLowerCase();
   if (text.includes('politics') || text.includes('election') || text.includes('government')) return 'Politics';
@@ -130,9 +153,9 @@ const inferCategory = (title: string, content: string): string => {
   return 'General';
 };
 
+// Skeleton component for loading state of news cards
 const NewsCardSkeleton = () => (
   <div className="relative bg-background/95 border border-border/20 rounded-lg p-6 h-full shadow-lg hover:shadow-xl transition-all duration-300">
-    {/* Header */}
     <div className="flex items-center justify-between gap-4 mb-4">
       <div className="flex items-center gap-2">
         <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
@@ -143,32 +166,22 @@ const NewsCardSkeleton = () => (
         <div className="w-8 h-8 bg-primary/20 rounded-full animate-pulse" />
       </div>
     </div>
-
-    {/* Thumbnail */}
     <div className="mb-4">
       <div className="w-full h-48 bg-primary/20 rounded-md animate-pulse" />
     </div>
-
-    {/* Category */}
     <div className="flex items-center gap-2 mb-2">
       <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
       <div className="h-4 w-24 bg-primary/20 rounded animate-pulse" />
     </div>
-
-    {/* Title */}
     <div className="space-y-2 mb-4">
       <div className="h-7 w-full bg-primary/20 rounded animate-pulse" />
       <div className="h-7 w-3/4 bg-primary/20 rounded animate-pulse" />
     </div>
-
-    {/* Content */}
     <div className="space-y-2 mb-6">
       <div className="h-4 w-full bg-primary/20 rounded animate-pulse" />
       <div className="h-4 w-full bg-primary/20 rounded animate-pulse" />
       <div className="h-4 w-2/3 bg-primary/20 rounded animate-pulse" />
     </div>
-
-    {/* Footer */}
     <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/20">
       <div className="flex items-center gap-2">
         <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
@@ -179,6 +192,7 @@ const NewsCardSkeleton = () => (
   </div>
 );
 
+// Define animation variants for news cards
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -188,6 +202,7 @@ const cardVariants = {
   }
 };
 
+// Custom select component for source and category filtering
 const ModernSelect = ({ value, onChange, options, placeholder, ariaLabel }) => (
   <div className="relative group min-w-[180px]">
     <div className="absolute inset-0 bg-primary/10 rounded-xl blur transition-all duration-300 group-hover:bg-primary/20" />
@@ -215,6 +230,7 @@ const ModernSelect = ({ value, onChange, options, placeholder, ariaLabel }) => (
   </div>
 );
 
+// Fetch RSS feed using a CORS proxy to handle cross-origin issues
 async function fetchWithCorsProxy(url: string): Promise<Response> {
   try {
     const response = await fetch(CORS_PROXY + encodeURIComponent(url));
@@ -228,6 +244,7 @@ async function fetchWithCorsProxy(url: string): Promise<Response> {
   }
 }
 
+// Parse RSS feed XML into NewsItem objects
 function parseRSS(xml: string): NewsItem[] {
   try {
     const parser = new DOMParser();
@@ -272,8 +289,11 @@ function parseRSS(xml: string): NewsItem[] {
   }
 }
 
+// NewsPage component: Fetches, displays, and analyzes news articles with filtering and pagination
 const NewsPage: React.FC = () => {
-  const { i18n } = useTranslation();
+  // Initialize hooks for translation, authentication, and state management
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,8 +312,71 @@ const NewsPage: React.FC = () => {
     isPlaying: false,
     currentArticleId: null
   });
+  const [savedArticles, setSavedArticles] = useState<Set<string>>(new Set());
+  const [savedArticlesData, setSavedArticlesData] = useState<NewsItem[]>([]);
+  const [showSavedArticles, setShowSavedArticles] = useState(false);
   const itemsPerPage = 8;
 
+  // Fetch saved articles from Firestore and listen for updates
+  useEffect(() => {
+    if (!user) return;
+
+    const savedArticlesRef = collection(db, 'users', user.uid, 'savedArticles');
+    const q = query(savedArticlesRef, orderBy('savedAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const savedUrls = new Set<string>();
+      const savedData: NewsItem[] = [];
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        savedUrls.add(data.url);
+        savedData.push({
+          title: data.title,
+          link: data.url,
+          pubDate: data.savedAt?.toDate().toISOString() || new Date().toISOString(),
+          contentSnippet: data.content,
+          source: data.source,
+          thumbnail: data.thumbnail,
+          category: inferCategory(data.title, data.content || ''),
+        });
+      });
+      setSavedArticles(savedUrls);
+      setSavedArticlesData(savedData);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Handler to save or unsave an article to/from Firestore
+  const handleSaveArticle = async (article: NewsItem) => {
+    if (!user) return;
+
+    try {
+      const savedArticlesRef = collection(db, 'users', user.uid, 'savedArticles');
+      
+      if (savedArticles.has(article.link)) {
+        const q = query(savedArticlesRef, where('url', '==', article.link));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach(async (doc) => {
+          await deleteDoc(doc.ref);
+        });
+      } else {
+        await addDoc(savedArticlesRef, {
+          url: article.link,
+          title: article.title,
+          source: article.source,
+          content: article.contentSnippet,
+          thumbnail: article.thumbnail,
+          savedAt: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error('Error saving/unsaving article:', error);
+      alert('Error saving article.');
+    }
+  };
+
+  // Handler for text-to-speech functionality
   const speak = (text: string, articleId: string) => {
     window.speechSynthesis.cancel();
 
@@ -330,6 +413,7 @@ const NewsPage: React.FC = () => {
     setSpeechState({ isPlaying: true, currentArticleId: articleId });
   };
 
+  // Generate animated sparkles for visual effect
   useEffect(() => {
     const generateSparkles = () => {
       const newSparkles = [];
@@ -381,6 +465,7 @@ const NewsPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Animate sparkles movement across the viewport
   useEffect(() => {
     if (sparkles.length === 0) return;
     
@@ -415,6 +500,7 @@ const NewsPage: React.FC = () => {
     };
   }, [sparkles]);
 
+  // Fetch news from all RSS feeds and handle errors
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
@@ -476,12 +562,14 @@ const NewsPage: React.FC = () => {
     }
   };
 
+  // Fetch news on mount and refresh every 5 minutes
   useEffect(() => {
     fetchNews();
     const interval = setInterval(fetchNews, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // Analyze article content for credibility and factuality
   const analyzeArticle = async (article: NewsItem) => {
     if (analyzingArticles.has(article.link)) return;
     setAnalyzingArticles(prev => new Set(prev).add(article.link));
@@ -502,6 +590,18 @@ const NewsPage: React.FC = () => {
             : item
         )
       );
+      setSavedArticlesData(prevData =>
+        prevData.map(item =>
+          item.link === article.link
+            ? {
+                ...item,
+                credibilityScore: analysis.credibilityScore,
+                isFactual: analysis.factCheck.isFactual,
+                warnings: analysis.warnings
+              }
+            : item
+        )
+      );
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
@@ -513,6 +613,7 @@ const NewsPage: React.FC = () => {
     }
   };
 
+  // Handler to share an article via native share or social media
   const shareArticle = (article: NewsItem) => {
     const shareText = `${article.title} - ${article.source}`;
     const shareUrl = article.link;
@@ -543,23 +644,31 @@ const NewsPage: React.FC = () => {
     }
   };
 
-  const filteredNews = news.filter(item => {
-    const matchesSource = selectedSource === 'all' || item.source === selectedSource;
-    const matchesCategory = selectedCategory === 'all' || 
-      RSS_FEEDS.find(feed => feed.name === item.source)?.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.contentSnippet?.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSource && matchesCategory && matchesSearch;
-  });
+  // Filter news based on source, category, and search query
+  const filteredNews = showSavedArticles
+    ? savedArticlesData
+    : news.filter(item => {
+        const matchesSource = selectedSource === 'all' || item.source === selectedSource;
+        const matchesCategory = selectedCategory === 'all' || 
+          RSS_FEEDS.find(feed => feed.name === item.source)?.category === selectedCategory;
+        const matchesSearch = !searchQuery || 
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.contentSnippet?.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesSource && matchesCategory && matchesSearch;
+      });
 
+  const displayedNews = filteredNews;
+
+  // Remove duplicate news items based on link
   const uniqueNews = Array.from(
-    new Map(filteredNews.map(item => [item.link, item])).values()
+    new Map(displayedNews.map(item => [item.link, item])).values()
   );
 
+  // Paginate news items
   const paginatedNews = uniqueNews.slice(0, page * itemsPerPage);
   const hasMore = paginatedNews.length < uniqueNews.length;
 
+  // Define options for category and source filters
   const categoryOptions = [
     { value: 'all', label: 'All Categories', icon: '🌐' },
     { value: 'International', label: 'International', icon: '🌍' },
@@ -574,8 +683,10 @@ const NewsPage: React.FC = () => {
       icon: feed.icon
     }));
 
+  // Render the main UI
   return (
     <div className="min-h-screen relative">
+      {/* Background layers for visual styling */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80" />
       
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-75 transition-opacity duration-300" />
@@ -584,6 +695,7 @@ const NewsPage: React.FC = () => {
       
       <div className="fixed inset-0" />
       
+      {/* Sparkle effect layer */}
       <div className="fixed inset-0 pointer-events-none z-10">
         {sparkles.map(sparkle => (
           <div
@@ -604,22 +716,41 @@ const NewsPage: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="max-w-7xl mx-auto">
+          {/* Header with navigation controls */}
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                asChild
-                className="flex items-center gap-2"
-              >
-                <Link to="/dashboard">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Link>
-              </Button>
-            </div>
-
+            <Button
+              variant="ghost"
+              asChild
+              className="flex items-center gap-2"
+            >
+              <Link to="/dashboard">
+                <ArrowLeft className="h-4 w-4" />
+                {t('common.back')}
+              </Link>
+            </Button>
+            
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSavedArticles(!showSavedArticles)}
+                  className={cn(
+                    "relative",
+                    showSavedArticles && "text-primary"
+                  )}
+                >
+                  {showSavedArticles ? (
+                    <BookmarkCheck className="h-5 w-5" />
+                  ) : (
+                    <Bookmark className="h-5 w-5" />
+                  )}
+                  {savedArticles.size > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
+                      {savedArticles.size}
+                    </span>
+                  )}
+                </Button>
                 <Button variant="ghost" size="icon" asChild>
                   <Link to="/dashboard">
                     <Home className="h-5 w-5" />
@@ -643,15 +774,21 @@ const NewsPage: React.FC = () => {
                 <ThemeToggle />
                 <UserNav />
               </div>
+              {/* Mobile sidebar for smaller screens */}
               <div className="md:hidden">
                 <MobileSidebar
-                  showHistory={showHistory}
-                  onHistoryClick={() => setShowHistory(!showHistory)}
+                  showHistory={false}
+                  onHistoryClick={() => {}}
+                  showSavedArticles={showSavedArticles}
+                  onSavedArticlesClick={() =>
+                    setShowSavedArticles(!showSavedArticles)}
+                  savedArticlesCount={savedArticles.size}
                 />
               </div>
             </div>
           </div>
 
+          {/* Main title section */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -673,9 +810,9 @@ const NewsPage: React.FC = () => {
 
           <div className="flex flex-col items-center gap-8 mb-8">
             <div className="w-full max-w-4xl mx-auto">
+              {/* Filter and search controls */}
               <div className="bg-background/95 border border-border/20 rounded-xl p-6 shadow-lg backdrop-blur-md">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Search Bar */}
                   <div className="col-span-1 sm:col-span-3">
                     <div className="relative group">
                       <div className="absolute inset-0 bg-primary/10 rounded-xl blur transition-all duration-300 group-focus-within:bg-primary/20" />
@@ -692,8 +829,6 @@ const NewsPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Category and Source Selects */}
                   <div className="col-span-1">
                     <ModernSelect
                       value={selectedCategory}
@@ -712,8 +847,6 @@ const NewsPage: React.FC = () => {
                       ariaLabel="Select news source"
                     />
                   </div>
-
-                  {/* Refresh Button */}
                   <div className="col-span-1 sm:col-span-3 flex justify-end">
                     <Button
                       variant="outline"
@@ -741,6 +874,7 @@ const NewsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Display warning for failed sources */}
             {failedSources.length > 0 && (
               <div className="mb-6 rounded-lg border bg-card/50 backdrop-blur-sm p-4">
                 <div className="flex items-center gap-2 text-warning">
@@ -750,6 +884,7 @@ const NewsPage: React.FC = () => {
               </div>
             )}
 
+            {/* News cards with loading and error states */}
             {loading ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {Array(8).fill(0).map((_, index) => (
@@ -835,6 +970,25 @@ const NewsPage: React.FC = () => {
                                 >
                                   <Share2 className="h-4 w-4" />
                                 </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn(
+                                    "h-8 w-8 text-foreground/70 hover:text-primary",
+                                    savedArticles.has(item.link) && "text-primary"
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSaveArticle(item);
+                                  }}
+                                  aria-label={savedArticles.has(item.link) ? "Unsave article" : "Save article"}
+                                >
+                                  {savedArticles.has(item.link) ? (
+                                    <BookmarkCheck className="h-4 w-4" />
+                                  ) : (
+                                    <Bookmark className="h-4 w-4" />
+                                  )}
+                                </Button>
                               </div>
                             </div>
 
@@ -889,6 +1043,7 @@ const NewsPage: React.FC = () => {
                         </motion.div>
                       </DialogTrigger>
 
+                      {/* Dialog for expanded article view */}
                       <DialogContent className="max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle className="text-2xl mb-4">{item.title}</DialogTitle>
@@ -940,6 +1095,7 @@ const NewsPage: React.FC = () => {
                             {item.contentSnippet}
                           </div>
 
+                          {/* Display analysis results if available */}
                           {item.credibilityScore !== undefined ? (
                             <div className="bg-card border border-border rounded-lg p-4 space-y-4">
                               <div className="flex items-center justify-between">
@@ -1017,6 +1173,7 @@ const NewsPage: React.FC = () => {
                   ))}
                 </div>
 
+                {/* Load more button for pagination */}
                 {hasMore && (
                   <div className="flex justify-center mt-8">
                     <Button

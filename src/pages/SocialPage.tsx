@@ -1,3 +1,4 @@
+// Import React hooks, router, animations, translation, and Firebase utilities
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { improveText, suggestReply, moderateContent } from '@/utils/geminiHelper';
 
+// Define interfaces for Post and Comment data structures
 interface Post {
   id: string;
   authorId: string;
@@ -82,7 +84,9 @@ interface Comment {
   replies?: Comment[];
 }
 
+// SocialPage component: Handles community feed with posts, comments, and interactions
 export const SocialPage = () => {
+  // Initialize hooks for translation, authentication, and state management
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -114,11 +118,13 @@ export const SocialPage = () => {
     suggestedRevision?: string;
   } | null>(null);
 
+  // Define available tags for posts
   const availableTags = [
     'News', 'Politics', 'Technology', 'Health', 'Science',
     'Business', 'Entertainment', 'Sports', 'Education', 'Environment'
   ];
 
+  // Fetch posts from Firestore and listen for real-time updates
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -143,6 +149,7 @@ export const SocialPage = () => {
     return () => unsubscribe();
   }, [user, t]);
 
+  // Sort posts by creation date
   useEffect(() => {
     const sorted = [...posts].sort((a, b) => {
       const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
@@ -152,6 +159,7 @@ export const SocialPage = () => {
     setSortedPosts(sorted);
   }, [posts]);
 
+  // Fetch comments for each post and handle nested replies
   useEffect(() => {
     if (!user || posts.length === 0) return;
 
@@ -190,6 +198,7 @@ export const SocialPage = () => {
     return () => unsubscribeComments.forEach(unsubscribe => unsubscribe());
   }, [user, posts]);
 
+  // Generate animated sparkles for visual effect
   useEffect(() => {
     const generateSparkles = () => {
       const newSparkles = [];
@@ -241,6 +250,7 @@ export const SocialPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Animate sparkles movement across the viewport
   useEffect(() => {
     if (sparkles.length === 0) return;
     
@@ -275,6 +285,7 @@ export const SocialPage = () => {
     };
   }, [sparkles]);
 
+  // Recursively fetch nested replies for a comment
   const getReplies = (comments: Comment[], parentId: string): Comment[] => {
     const replies = comments.filter(comment => comment.parentId === parentId);
     return replies.map(reply => ({
@@ -283,6 +294,7 @@ export const SocialPage = () => {
     }));
   };
 
+  // Filter posts based on search query
   const filteredPosts = sortedPosts.filter(post => {
     const matchesSearch = !searchQuery || 
       post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -291,6 +303,7 @@ export const SocialPage = () => {
     return matchesSearch;
   });
 
+  // Handler to create a new post with content moderation
   const handlePost = async () => {
     if (!user || !newPost.trim() || charCount > 280) return;
 
@@ -334,6 +347,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to improve post text using AI
   const handleImproveText = async (text: string) => {
     setIsImproving(true);
     try {
@@ -348,6 +362,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to suggest a reply to a post using AI
   const handleSuggestReply = async (postId: string, originalPost: string, previousComments: string[] = []) => {
     setIsSuggestingReply(postId);
     try {
@@ -361,6 +376,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to edit an existing post
   const handleEditPost = async (postId: string) => {
     if (!user || !editPostContent.trim()) return;
     try {
@@ -379,6 +395,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to like a post
   const handleLike = async (postId: string, isLiked: boolean) => {
     if (!user) return;
 
@@ -393,6 +410,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to dislike a post
   const handleDislike = async (postId: string, isDisliked: boolean) => {
     if (!user) return;
 
@@ -407,6 +425,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to like a comment
   const handleCommentLike = async (postId: string, commentId: string, isLiked: boolean) => {
     if (!user) return;
     try {
@@ -420,6 +439,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to dislike a comment
   const handleCommentDislike = async (postId: string, commentId: string, isDisliked: boolean) => {
     if (!user) return;
     try {
@@ -433,6 +453,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to delete a post and its comments
   const handleDelete = async (postId: string) => {
     if (!user) return;
 
@@ -479,6 +500,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to edit an existing comment
   const handleEditComment = async (postId: string, commentId: string) => {
     if (!user || !editCommentContent.trim()) return;
     try {
@@ -495,6 +517,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to delete a comment and its replies
   const handleDeleteComment = async (postId: string, commentId: string) => {
     if (!user) return;
     try {
@@ -513,6 +536,7 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to share a post via native share or clipboard
   const handleShare = async (post: Post) => {
     const shareText = `${post.content}\n\nShared from Verifai`;
     
@@ -532,16 +556,19 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to toggle tags for a post
   const handleTagClick = (tag: string) => {
     setSelectedTags(prev => 
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
   };
 
+  // Handler to update comment input for a specific post or reply
   const handleCommentChange = (id: string, value: string) => {
     setNewComment(prev => ({ ...prev, [id]: value }));
   };
 
+  // Handler to add a new comment or reply
   const handleAddComment = async (postId: string, parentId: string | null = null) => {
     if (!user) return;
     
@@ -602,12 +629,14 @@ export const SocialPage = () => {
     }
   };
 
+  // Handler to update post content and character count
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setNewPost(value);
     setCharCount(value.length);
   };
 
+  // Recursively find a comment by ID in the nested comment structure
   const findComment = (comments: Comment[], commentId: string): Comment | null => {
     for (const comment of comments || []) {
       if (comment.id === commentId) return comment;
@@ -619,10 +648,12 @@ export const SocialPage = () => {
     return null;
   };
 
+  // Handler to toggle comment section for a post
   const handleCommentClick = (postId: string) => {
     setExpandedPost(expandedPost === postId ? null : postId);
   };
 
+  // Calculate total number of comments for a post, including replies
   const getCommentCount = (postId: string): number => {
     const postComments = comments[postId] || [];
     let count = postComments.length;
@@ -636,6 +667,7 @@ export const SocialPage = () => {
     return count;
   };
 
+  // Render comments recursively with nested replies
   const renderComments = (comments: Comment[], postId: string, level = 0) => {
     return comments.map(comment => (
       <div 
@@ -797,6 +829,7 @@ export const SocialPage = () => {
     ));
   };
 
+  // Render a single post with its comments
   const renderPost = (post: Post, index: number) => (
     <motion.div
       key={post.id}
@@ -1007,46 +1040,49 @@ export const SocialPage = () => {
             className="mt-4 overflow-hidden"
           >
             <div className="pt-4 border-t border-border/20">
-              <div className="flex gap-2 mb-4">
+              <div className="mb-4 space-y-2 sm:flex sm:gap-2 sm:space-y-0">
                 <input
                   type="text"
                   value={newComment[post.id] || ''}
                   onChange={(e) => handleCommentChange(post.id, e.target.value)}
                   placeholder={t('Add a comment...')}
-                  className="flex-1 p-2 bg-background/80 border border-input rounded-lg focus:ring-0 focus:border-primary text-sm"
+                  className="w-full p-2 bg-background/80 border border-input rounded-lg focus:ring-0 focus:border-primary text-sm"
                 />
-                <Button
-                  size="sm"
-                  onClick={() => handleAddComment(post.id)}
-                  disabled={!newComment[post.id]?.trim()}
-                >
-                  {t('Post')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSuggestReply(
-                    post.id,
-                    post.content,
-                    comments[post.id]?.map(c => c.content) || []
-                  )}
-                  disabled={isSuggestingReply === post.id}
-                  className="flex items-center gap-2"
-                >
-                  {isSuggestingReply === post.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Brain className="h-4 w-4" />
-                  )}
-                  {isSuggestingReply === post.id ? t('Suggesting...') : t('Suggest Reply')}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleAddComment(post.id)}
+                    disabled={!newComment[post.id]?.trim()}
+                    className="w-full sm:w-auto"
+                  >
+                    {t('Post')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSuggestReply(
+                      post.id,
+                      post.content,
+                      comments[post.id]?.map(c => c.content) || []
+                    )}
+                    disabled={isSuggestingReply === post.id}
+                    className="w-full sm:w-auto flex items-center gap-2"
+                  >
+                    {isSuggestingReply === post.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Brain className="h-4 w-4" />
+                    )}
+                    {isSuggestingReply === post.id ? t('Suggesting...') : t('Suggest Reply')}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
                 {comments[post.id]?.length > 0 ? (
                   renderComments(comments[post.id], post.id)
                 ) : (
-                  <p className="text-sm text.cted-foreground">{t('No comments yet.')}</p>
+                  <p className="text-sm text-muted-foreground">{t('No comments yet.')}</p>
                 )}
               </div>
             </div>
@@ -1056,16 +1092,19 @@ export const SocialPage = () => {
     </motion.div>
   );
 
+  // Render the main UI
   return (
     <div className="min-h-screen relative">
+      {/* Background layers for visual styling */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80" />
       
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-75 transition-opacity duration-300" />
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-50 transition-opacity duration-300" />
       
       <div className="fixed inset-0 bg-[radial-gradient(100%_100%_at_50%_0%,#ffffff_0%,rgba(255,255,255,0)_100%)] dark:bg-[radial-gradient(100%_100%_at_50%_0%,rgba(30,41,59,0.5)_0%,rgba(30,41,59,0)_100%)]" />
       
       <div className="fixed inset-0" />
       
+      {/* Sparkle effect layer */}
       <div className="fixed inset-0 pointer-events-none z-10">
         {sparkles.map(sparkle => (
           <div
@@ -1086,6 +1125,7 @@ export const SocialPage = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-20 w-full max-w-5xl">
         <div className="max-w-5xl mx-auto">
+          {/* Header with navigation controls */}
           <div className="flex items-center justify-between mb-8">
             <Button
               variant="ghost"
@@ -1100,6 +1140,7 @@ export const SocialPage = () => {
             
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
+                {/* Navigation links */}
                 <Button variant="ghost" size="icon" asChild>
                   <Link to="/dashboard">
                     <Home className="h-5 w-5" />
@@ -1123,6 +1164,7 @@ export const SocialPage = () => {
                 <ThemeToggle />
                 <UserNav />
               </div>
+              {/* Mobile sidebar for smaller screens */}
               <div className="md:hidden">
                 <MobileSidebar
                   showHistory={false}
@@ -1132,6 +1174,7 @@ export const SocialPage = () => {
             </div>
           </div>
 
+          {/* Main title section */}
           <motion.div 
             className="text-center mb-12 relative"
             initial={{ opacity: 0, y: -20 }}
@@ -1151,24 +1194,26 @@ export const SocialPage = () => {
             </p>
           </motion.div>
 
+          {/* Search bar for filtering posts */}
           <div className="mb-8">
-  <div className="relative flex items-center">
-    <Search className="absolute left-4 h-5 w-5 text-primary/70 z-10 transition-colors group-focus-within:text-primary" />
-    <input
-      type="text"
-      placeholder={t('Search posts by content, author, or tags...')}
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full pl-10 pr-4 py-3 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
-    />
-  </div>
-</div>
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 h-5 w-5 text-primary/70 z-10 transition-colors group-focus-within:text-primary" />
+              <input
+                type="text"
+                placeholder={t('Search posts by content, author, or tags...')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+              />
+            </div>
+          </div>
 
           <div className="space-y-8">
+            {/* New post creation section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card/50 backdrop-blur-sm rounded-xl p-6 border border-border/50 shadow-lg relative overflow-hidden"
+              className="bg-card/50 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-border/50 shadow-lg relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
@@ -1177,18 +1222,18 @@ export const SocialPage = () => {
                 value={newPost}
                 onChange={handleTextChange}
                 placeholder={t('Share your thoughts...')}
-                className="w-full h-32 p-4 mb-4 bg-background/80 backdrop-blur-sm rounded-lg border border-input focus:ring-0 focus:border-primary/50 transition-all duration-300 text-base shadow-sm relative placeholder:text-muted-foreground/50"
+                className="w-full h-24 sm:h-32 p-3 sm:p-4 mb-4 bg-background/80 backdrop-blur-sm rounded-lg border border-input focus:ring-0 focus:border-primary/50 transition-all duration-300 text-sm sm:text-base shadow-sm relative placeholder:text-muted-foreground/50"
                 style={{ resize: 'vertical' }}
               />
 
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="mb-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+                <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleImproveText(newPost)}
                     disabled={isImproving || !newPost.trim()}
-                    className="flex items-center gap-2"
+                    className="w-full sm:w-auto flex items-center gap-2"
                   >
                     {isImproving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1204,7 +1249,7 @@ export const SocialPage = () => {
                         variant={selectedTags.includes(tag) ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleTagClick(tag)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs sm:text-sm"
                       >
                         <Hash className="h-3 w-3" />
                         {tag}
@@ -1212,7 +1257,7 @@ export const SocialPage = () => {
                     ))}
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {charCount}/280
                 </div>
               </div>
@@ -1226,12 +1271,12 @@ export const SocialPage = () => {
 
               {moderationResult && !moderationResult.isAppropriate && (
                 <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-4">
-                  <h4 className="font-medium mb-2">{t('Content Moderation Warning')}</h4>
-                  <p className="text-sm mb-2">{moderationResult.reason}</p>
+                  <h4 className="font-medium mb-2 text-sm">{t('Content Moderation Warning')}</h4>
+                  <p className="text-xs sm:text-sm mb-2">{moderationResult.reason}</p>
                   {moderationResult.suggestedRevision && (
                     <div className="mt-2">
-                      <p className="text-sm font-medium mb-1">{t('Suggested Revision')}:</p>
-                      <p className="text-sm">{moderationResult.suggestedRevision}</p>
+                      <p className="text-xs sm:text-sm font-medium mb-1">{t('Suggested Revision')}:</p>
+                      <p className="text-xs sm:text-sm">{moderationResult.suggestedRevision}</p>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1253,7 +1298,7 @@ export const SocialPage = () => {
                 <Button
                   onClick={handlePost}
                   disabled={!newPost.trim() || loading || charCount > 280 || isModeratingContent}
-                  className="relative overflow-hidden group"
+                  className="relative overflow-hidden group w-full sm:w-auto"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   {isModeratingContent ? (
@@ -1271,6 +1316,7 @@ export const SocialPage = () => {
               </div>
             </motion.div>
 
+            {/* Posts list with loading and empty states */}
             <AnimatePresence>
               {loading ? (
                 <div className="text-center text-muted-foreground">{t('Loading posts...')}</div>
@@ -1286,6 +1332,7 @@ export const SocialPage = () => {
         </div>
       </div>
 
+      {/* Responsive styles for different screen sizes */}
       <style jsx>{`
         @media (max-width: 640px) {
           .container {
@@ -1295,12 +1342,53 @@ export const SocialPage = () => {
             max-width: 100% !important;
             width: 100%;
           }
-          .bg-card {
-            padding: 1rem;
+          .bg-card\/50 {
+            padding: 1rem !important;
           }
-          textarea, input {
-            font-size: clamp(0.875rem, 2.5vw, 1rem);
-            padding: 0.5rem;
+          .h-24.sm\:h-32 {
+            height: 6rem;
+          }
+          .p-3.sm\:p-4 {
+            padding: 0.75rem;
+          }
+          .text-sm.sm\:text-base {
+            font-size: 0.875rem;
+          }
+          .text-xs.sm\:text-sm {
+            font-size: 0.75rem;
+          }
+          .space-y-3.sm\:space-y-0 {
+            space-y: 0.75rem;
+          }
+          .space-y-2.sm\:space-y-0 {
+            space-y: 0.5rem;
+          }
+          .space-y-2 {
+            space-y: 0.5rem;
+          }
+          .sm\:flex {
+            display: block;
+          }
+          .sm\:gap-2 {
+            gap: 0.5rem;
+          }
+          .sm\:space-y-0 {
+            space-y: 0.5rem;
+          }
+          .sm\:items-center {
+            align-items: flex-start;
+          }
+          .sm\:justify-between {
+            justify-content: flex-start;
+          }
+          .w-full.sm\:w-auto {
+            width: 100%;
+          }
+          .flex.flex-col.sm\:flex-row {
+            flex-direction: column;
+          }
+          .space-y-2.sm\:flex.sm\:items-center.sm\:gap-2 {
+            display: block;
           }
           .flex.items-center.gap-4 button {
             padding: 0.25rem 0.5rem;
@@ -1311,6 +1399,12 @@ export const SocialPage = () => {
           }
           .text-lg {
             font-size: clamp(0.875rem, 3vw, 1.125rem);
+          }
+          .nested-comments {
+            max-width: 90vw;
+          }
+          .border-l-2, .ml-4 {
+            margin-left: 0.5rem;
           }
         }
 
@@ -1335,14 +1429,6 @@ export const SocialPage = () => {
         }
         .ml-4 {
           margin-left: clamp(0.5rem, 2vw, 1rem);
-        }
-        @media (max-width: 640px) {
-          .nested-comments {
-            max-width: 90vw;
-          }
-          .border-l-2, .ml-4 {
-            margin-left: 0.5rem;
-          }
         }
       `}</style>
     </div>
