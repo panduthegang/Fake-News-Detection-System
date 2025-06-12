@@ -1,7 +1,7 @@
 # Verifai - AI-Powered Content Verification Platform 🔍
 
 <div align="center">
-  <img src="/public/logo.svg" alt="Verifai Logo" width="200" />
+  <img src="/public/Thumbnail.png" alt="Verifai Thumbnail" width="400" />
   <p align="center">
     <strong>Combat misinformation with advanced AI-powered content verification</strong>
   </p>
