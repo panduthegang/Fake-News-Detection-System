@@ -37,6 +37,7 @@ import { HistoryPanel } from '@/components/HistoryPanel';
 import { Link } from 'react-router-dom';
 import { ArticleAnalysisSkeleton } from '@/components/ArticleAnalysisSkeleton';
 import { AnimatedCredibilityMeter } from '@/components/AnimatedCredibilityMeter';
+import {Tooltip} from '@/components/Tooltip';
 import { UserNav } from '@/components/UserNav'; // Placeholder import - adjust path as needed
 
 // ArticleAnalysisPage component: Handles image-based article analysis
@@ -280,70 +281,99 @@ export const ArticleAnalysisPage: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="max-w-5xl mx-auto">
-          {/* Header with navigation controls */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                asChild
-                className="flex items-center gap-2"
-              >
-                <Link to="/dashboard">
-                  <ArrowLeft className="h-4 w-4" />
-                  {t('common.back')}
-                </Link>
-              </Button>
-            </div>
+        <div className="flex items-center justify-between mb-8">
+  <div className="flex items-center gap-2">
+    <Button
+      variant="ghost"
+      asChild
+      className="flex items-center gap-2"
+    >
+      <Link to="/dashboard">
+        <ArrowLeft className="h-4 w-4" />
+        {t('common.back')}
+      </Link>
+    </Button>
+  </div>
 
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2">
-                {/* Navigation links */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                >
-                  <Link to="/dashboard" state={{ skipLanding: true }}>
-                    <Home className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="relative"
-                >
-                  <History className="h-5 w-5" />
-                  {history.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
-                      {history.length}
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  className="relative"
-                >
-                  <Link to="/news">
-                    <Newspaper className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/social">
-                    <MessageCircle className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/about">
-                    <Info className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <LanguageSelector />
-                <ThemeToggle />
-                <UserNav />
-              </div>
+  <div className="flex items-center gap-4">
+    <div className="hidden md:flex items-center gap-2">
+      {/* Home */}
+      <Tooltip text={t('Content Analyzer')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/dashboard" state={{ skipLanding: true }}>
+            <Home className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* Analysis History */}
+      <Tooltip text={t('Analysis History')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowHistory(!showHistory)}
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <History className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          {history.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
+              {history.length}
+            </span>
+          )}
+        </Button>
+      </Tooltip>
+
+      {/* News Analysis */}
+      <Tooltip text={t('News Analysis')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/news">
+            <Newspaper className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* Community Feed */}
+      <Tooltip text={t('Community Feed')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/social">
+            <MessageCircle className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* About Us */}
+      <Tooltip text={t('About us')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/about">
+            <Info className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      <LanguageSelector />
+      <ThemeToggle />
+      <UserNav />
+    </div>
               {/* Mobile sidebar for smaller screens */}
               <div className="md:hidden">
                 <MobileSidebar

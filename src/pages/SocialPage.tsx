@@ -57,6 +57,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { improveText, suggestReply, moderateContent } from '@/utils/geminiHelper';
+import {Tooltip} from '@/components/Tooltip.tsx';
 
 // Define interfaces for Post and Comment data structures
 interface Post {
@@ -1125,46 +1126,80 @@ export const SocialPage = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-20 w-full max-w-5xl">
         <div className="max-w-5xl mx-auto">
-          {/* Header with navigation controls */}
-          <div className="flex items-center justify-between mb-8">
-            <Button
-              variant="ghost"
-              asChild
-              className="flex items-center gap-2"
-            >
-              <Link to="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
-                {t('common.back')}
-              </Link>
-            </Button>
-            
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2">
-                {/* Navigation links */}
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/dashboard">
-                    <Home className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/article-analysis">
-                    <Camera className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/news">
-                    <Newspaper className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/about">
-                    <Info className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <ThemeToggle />
-                <UserNav />
-              </div>
-              {/* Mobile sidebar for smaller screens */}
+        <div className="flex items-center justify-between mb-8">
+  <Button
+    variant="ghost"
+    asChild
+    className="flex items-center gap-2"
+  >
+    <Link to="/dashboard">
+      <ArrowLeft className="h-4 w-4" />
+      {t('common.back')}
+    </Link>
+  </Button>
+  
+  <div className="flex items-center gap-4">
+    <div className="hidden md:flex items-center gap-2">
+      {/* Home */}
+      <Tooltip text={t('Content Analyzer')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/dashboard">
+            <Home className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* Article-Analysis */}
+      <Tooltip text={t('Article Analysis')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/article-analysis">
+            <Camera className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* News Analysis */}
+      <Tooltip text={t('News Analysis')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/news">
+            <Newspaper className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* About Us */}
+      <Tooltip text={t('About us')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/about">
+            <Info className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      <ThemeToggle />
+      <UserNav />
+    </div>
+               {/* Mobile sidebar for smaller screens */}
               <div className="md:hidden">
                 <MobileSidebar
                   showHistory={false}

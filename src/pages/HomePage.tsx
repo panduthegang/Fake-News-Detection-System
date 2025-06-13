@@ -45,6 +45,7 @@ import { LandingPage } from './LandingPage';
 import { Particles } from '@/components/Particles';
 import { UserNav } from '@/components/UserNav';
 import { useAuth } from '@/components/AuthProvider';
+import {Tooltip} from '@/components/Tooltip';
 import { saveAnalysis, getAnalysisHistory, deleteAnalysis } from '@/lib/firestore';
 
 // Define props interface for the HomePage component
@@ -375,60 +376,83 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
                   
                   <div className="flex items-center gap-4">
                     <div className="hidden md:flex items-center gap-2">
-                      {/* History button with notification badge */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowHistory(!showHistory)}
-                        className="relative"
-                      >
-                        <History className="h-5 w-5" />
-                        {history.length > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
-                            {history.length}
-                          </span>
-                        )}
-                      </Button>
-                      {/* Navigation links */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        className="relative"
-                      >
-                        <Link to="/article-analysis">
-                          <Camera className="h-5 w-5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        className="relative"
-                      >
-                        <Link to="/news">
-                          <Newspaper className="h-5 w-5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                        className="relative"
-                      >
-                        <Link to="/social">
-                          <MessageCircle className="h-5 w-5" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link to="/about">
-                          <Info className="h-5 w-5" />
-                        </Link>
-                      </Button>
-                      <LanguageSelector />
-                      <ThemeToggle />
-                      <UserNav />
-                    </div>
+  {/* History button with notification badge */}
+  <Tooltip text={t('Analysis History')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setShowHistory(!showHistory)}
+      className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+    >
+      <History className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+      {history.length > 0 && (
+        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
+          {history.length}
+        </span>
+      )}
+    </Button>
+  </Tooltip>
+
+  {/* Article Analysis */}
+  <Tooltip text={t('Article-Analysis')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      asChild
+      className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+    >
+      <Link to="/article-analysis">
+        <Camera className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+      </Link>
+    </Button>
+  </Tooltip>
+
+  {/* News */}
+  <Tooltip text={t('News Analysis')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      asChild
+      className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+    >
+      <Link to="/news">
+        <Newspaper className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+      </Link>
+    </Button>
+  </Tooltip>
+
+  {/* Social */}
+  <Tooltip text={t('Community Feed')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      asChild
+      className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+    >
+      <Link to="/social">
+        <MessageCircle className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+      </Link>
+    </Button>
+  </Tooltip>
+
+  {/* About */}
+  <Tooltip text={t('About Us')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      asChild
+      className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+    >
+      <Link to="/about">
+        <Info className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+      </Link>
+    </Button>
+  </Tooltip>
+
+  <LanguageSelector />
+  <ThemeToggle />
+  <UserNav />
+</div>
                     {/* Mobile sidebar for smaller screens */}
                     <div className="md:hidden">
                       <MobileSidebar

@@ -59,6 +59,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import {Tooltip} from '@/components/Tooltip.tsx';
 
 // Define interface for NewsItem data structure
 interface NewsItem {
@@ -716,64 +717,103 @@ const NewsPage: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="max-w-7xl mx-auto">
-          {/* Header with navigation controls */}
-          <div className="flex items-center justify-between mb-8">
-            <Button
-              variant="ghost"
-              asChild
-              className="flex items-center gap-2"
-            >
-              <Link to="/dashboard">
-                <ArrowLeft className="h-4 w-4" />
-                {t('common.back')}
-              </Link>
-            </Button>
-            
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowSavedArticles(!showSavedArticles)}
-                  className={cn(
-                    "relative",
-                    showSavedArticles && "text-primary"
-                  )}
-                >
-                  {showSavedArticles ? (
-                    <BookmarkCheck className="h-5 w-5" />
-                  ) : (
-                    <Bookmark className="h-5 w-5" />
-                  )}
-                  {savedArticles.size > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
-                      {savedArticles.size}
-                    </span>
-                  )}
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/dashboard">
-                    <Home className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/article-analysis">
-                    <Camera className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/social">
-                    <MessageCircle className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/about">
-                    <Info className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <ThemeToggle />
-                <UserNav />
-              </div>
+<div className="flex items-center justify-between mb-8">
+  <Button
+    variant="ghost"
+    asChild
+    className="flex items-center gap-2"
+  >
+    <Link to="/dashboard">
+      <ArrowLeft className="h-4 w-4" />
+      {t('common.back')}
+    </Link>
+  </Button>
+  
+  <div className="flex items-center gap-4">
+    <div className="hidden md:flex items-center gap-2">
+      {/* Saved Articles */}
+      <Tooltip text={t('Saved Articles')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowSavedArticles(!showSavedArticles)}
+          className={cn(
+            "relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110",
+            showSavedArticles && "text-primary"
+          )}
+        >
+          {showSavedArticles ? (
+            <BookmarkCheck className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          ) : (
+            <Bookmark className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          )}
+          {savedArticles.size > 0 && (
+            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full w-4 h-4 text-xs flex items-center justify-center">
+              {savedArticles.size}
+            </span>
+          )}
+        </Button>
+      </Tooltip>
+
+      {/* Home */}
+      <Tooltip text={t('Content Analyzer')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/dashboard">
+            <Home className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* Article-Analysis */}
+      <Tooltip text={t('Article Analysis')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/article-analysis">
+            <Camera className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* Community Feed */}
+      <Tooltip text={t('Community Feed')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/social">
+            <MessageCircle className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      {/* About Us */}
+      <Tooltip text={t('About us')}>
+        <Button
+          variant="ghost"
+          size="icon"
+          asChild
+          className="relative group hover:bg-primary/10 transition-transform duration-200 transform hover:scale-110"
+        >
+          <Link to="/about">
+            <Info className="h-5 w-5 transition-colors duration-200 group-hover:text-primary" />
+          </Link>
+        </Button>
+      </Tooltip>
+
+      <ThemeToggle />
+      <UserNav />
+    </div>
               {/* Mobile sidebar for smaller screens */}
               <div className="md:hidden">
                 <MobileSidebar
