@@ -46,6 +46,28 @@ const teamMembers: TeamMember[] = [
       github: 'https://github.com/ailuropix',
       email: 'mailto:purohitpooja321@gmail.com'
     }
+  },
+  {
+    name: 'David Park',
+    role: 'Full Stack Developer',
+    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=500&h=500',
+    bio: 'Expert in modern web technologies and cloud architecture. Ensures seamless integration of AI capabilities across the platform.',
+    social: {
+      linkedin: 'https://linkedin.com',
+      github: 'https://github.com',
+      email: 'mailto:david@verifai.ai'
+    }
+  },
+  {
+    name: 'Aisha Khan',
+    role: 'Data Science Lead',
+    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=500&h=500',
+    bio: 'PhD in Computer Science with focus on data analytics and machine learning. Leads data-driven decision making and model optimization.',
+    social: {
+      linkedin: 'https://linkedin.com',
+      github: 'https://github.com',
+      email: 'mailto:aisha@verifai.ai'
+    }
   }
 ];
 
@@ -226,7 +248,7 @@ export const AboutPage: React.FC = () => {
                   <Link to="/">Try it Now</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <a href="https://github.com/panduthegang/Fake-News-Detection-System" target="_blank" rel="noopener noreferrer">
+                  <a href="https://github.com/yourusername/verifai" target="_blank" rel="noopener noreferrer">
                     <Github className="mr-2 h-4 w-4" />
                     View on GitHub
                   </a>
@@ -280,10 +302,10 @@ export const AboutPage: React.FC = () => {
               <h2 className="text-3xl font-bold text-center mb-8">Our Story</h2>
               <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
                 <p className="text-muted-foreground leading-relaxed mb-6">
-                  Verifai was born out of a shared mission to counter the growing impact of misinformation in the digital age. Our team of developers, designers, and AI enthusiasts came together with a vision to build a reliable, easy-to-use platform that helps people verify the authenticity of online content.
+                  Verifai was born from a shared concern about the rapid spread of misinformation in today's digital landscape. Our team of AI specialists, developers, and designers came together with a common goal: to create a powerful yet accessible tool that helps people verify information quickly and accurately.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  By combining the power of Gemini, and carefully selected APIs, we’ve created a system that can detect credibility signals, uncover bias, and highlight factual inconsistencies. We’re committed to making information verification smarter, faster, and more accessible for everyone.
+                  Using Google's advanced Gemini AI technology, we've developed a sophisticated system that analyzes content across multiple dimensions - from factual accuracy to bias detection. Our commitment to transparency and accuracy drives us to continuously improve and adapt our technology to meet the evolving challenges of digital misinformation.
                 </p>
               </div>
             </motion.div>
@@ -304,7 +326,7 @@ export const AboutPage: React.FC = () => {
               </p>
             </motion.div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 justify-items-center max-w-3xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {teamMembers.map((member, index) => (
                 <motion.div
                   key={index}
@@ -313,7 +335,7 @@ export const AboutPage: React.FC = () => {
                   initial="hidden"
                   animate="visible"
                   whileHover="hover"
-                  className="group relative w-full max-w-sm"
+                  className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
                   <div className="relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 h-full shadow-lg hover:shadow-xl transition-all duration-300">
