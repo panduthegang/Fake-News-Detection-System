@@ -13,6 +13,7 @@ import { HistoryPanel } from './components/HistoryPanel';
 import { StoryTimeline } from './components/StoryTimeline';
 import { PatternAnalysis } from './components/PatternAnalysis';
 import { SimilarityMatrix } from './components/SimilarityMatrix';
+import { ReportGenerator } from './components/ReportGenerator';
 
 function App() {
   const [text, setText] = useState('');
@@ -127,7 +128,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 dark:from-background dark:to-background">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
-          {/* Header - Centered with enhanced styling */}
+          {/* Header */}
           <div className="text-center mb-12 relative">
             <div className="absolute right-0 top-0 flex items-center gap-2">
               <Button
@@ -157,7 +158,7 @@ function App() {
                 </h1>
               </div>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Advanced content analysis powered by Advanced NLP technquies.
+                Advanced content analysis powered by Google's Gemini AI
               </p>
             </motion.div>
           </div>
@@ -344,6 +345,7 @@ function App() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   className="bg-card rounded-xl shadow-lg p-8 border border-border/50"
+                  id="analysis-results"
                 >
                   <div className="flex justify-between items-start mb-8">
                     <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -466,6 +468,12 @@ function App() {
                         )}
                       </div>
                     ))}
+                  </div>
+
+                  {/* Report Generator Section */}
+                  <div className="mt-8 pt-8 border-t border-border">
+                    <h3 className="text-lg font-semibold mb-4">Export & Share</h3>
+                    <ReportGenerator result={result} text={text} />
                   </div>
                 </motion.div>
               )}
