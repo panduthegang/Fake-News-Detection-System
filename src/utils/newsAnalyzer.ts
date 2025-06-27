@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AnalysisResult, ContentStatistics, } from './types';
+import { AnalysisResult, ContentStatistics, ImageAnalysis } from './types';
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
@@ -175,7 +175,7 @@ export const analyzeText = async (text: string): Promise<AnalysisResult> => {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
     const prompt = `You are a fact-checking system that ONLY responds with valid JSON.
 
