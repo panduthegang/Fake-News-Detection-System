@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
-import { FileDown, Share2, Badge, Check, Copy } from 'lucide-react';
+import { FileDown, Share2, Badge, Check, Copy, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { AnalysisResult } from '@/utils/types';
 import * as htmlToImage from 'html-to-image';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ExternalHyperlink } from 'docx';
+import { saveAs } from 'file-saver';
 
 interface ReportGeneratorProps {
   result: AnalysisResult;
@@ -13,7 +14,6 @@ interface ReportGeneratorProps {
 
 export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ result, text }) => {
   const [copied, setCopied] = useState(false);
-  // Check if Web Share API is supported AND we're in a secure context
   const canShare = typeof navigator.share !== 'undefined' && window.isSecureContext;
 
   const generateQRCode = async (data: string): Promise<string> => {
@@ -33,19 +33,9 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ result, text }
     }
   };
 
-  const generatePDF = async () => {
-    const element = document.getElementById('analysis-results');
-    if (!element) return;
-
+  const generateWordDoc = async () => {
     try {
-      // Create PDF in A4 format
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      // Generate QR code for verification
+      // Create verification QR code
       const verificationData = {
         text: text.substring(0, 100) + '...',
         credibilityScore: result.credibilityScore,
@@ -55,125 +45,229 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ result, text }
       };
       const qrCode = await generateQRCode(JSON.stringify(verificationData));
 
-      // Convert results to image
-      const dataUrl = await htmlToImage.toPng(element, {
-        quality: 1.0,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff'
+      // Create document
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            // Title
+            new Paragraph({
+              text: "AI Fake News Analysis Report",
+              heading: HeadingLevel.HEADING_1,
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                after: 400,
+              },
+            }),
+
+            // Report Info
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Report Generated: ${new Date().toLocaleString()}`,
+                  size: 20,
+                }),
+              ],
+              spacing: {
+                after: 200,
+              },
+            }),
+
+            // Credibility Score
+            new Paragraph({
+              text: "Credibility Assessment",
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 400,
+                after: 200,
+              },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Score: ${result.credibilityScore}/100`,
+                  bold: true,
+                  size: 28,
+                }),
+              ],
+              spacing: {
+                after: 200,
+              },
+            }),
+
+            // Analyzed Content
+            new Paragraph({
+              text: "Analyzed Content",
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 400,
+                after: 200,
+              },
+            }),
+            new Paragraph({
+              text: text,
+              spacing: {
+                after: 200,
+              },
+            }),
+
+            // Factual Assessment
+            new Paragraph({
+              text: "Factual Assessment",
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 400,
+                after: 200,
+              },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: result.factCheck.isFactual ? "✓ Verified" : "⚠ Unverified",
+                  bold: true,
+                  color: result.factCheck.isFactual ? "008000" : "FF0000",
+                }),
+              ],
+              spacing: {
+                after: 200,
+              },
+            }),
+            new Paragraph({
+              text: result.factCheck.explanation,
+              spacing: {
+                after: 400,
+              },
+            }),
+
+            // Statistics
+            new Paragraph({
+              text: "Content Statistics",
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 400,
+                after: 200,
+              },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun("Word Count: "),
+                new TextRun({
+                  text: `${result.statistics.wordCount}\n`,
+                  bold: true,
+                }),
+                new TextRun("Reading Time: "),
+                new TextRun({
+                  text: `${result.statistics.readingTimeMinutes} minutes\n`,
+                  bold: true,
+                }),
+                new TextRun("Average Sentence Length: "),
+                new TextRun({
+                  text: `${result.statistics.averageSentenceLength} words\n`,
+                  bold: true,
+                }),
+              ],
+              spacing: {
+                after: 200,
+              },
+            }),
+
+            // Warnings
+            ...(result.warnings.length > 0 ? [
+              new Paragraph({
+                text: "Warnings",
+                heading: HeadingLevel.HEADING_2,
+                spacing: {
+                  before: 400,
+                  after: 200,
+                },
+              }),
+              ...result.warnings.map(
+                warning =>
+                  new Paragraph({
+                    text: `• ${warning}`,
+                    spacing: {
+                      after: 100,
+                    },
+                  })
+              ),
+            ] : []),
+
+            // Suggestions
+            ...(result.suggestions.length > 0 ? [
+              new Paragraph({
+                text: "Suggestions",
+                heading: HeadingLevel.HEADING_2,
+                spacing: {
+                  before: 400,
+                  after: 200,
+                },
+              }),
+              ...result.suggestions.map(
+                suggestion =>
+                  new Paragraph({
+                    text: `• ${suggestion}`,
+                    spacing: {
+                      after: 100,
+                    },
+                  })
+              ),
+            ] : []),
+
+            // Sources
+            ...(result.factCheck.sources ? [
+              new Paragraph({
+                text: "Verified Sources",
+                heading: HeadingLevel.HEADING_2,
+                spacing: {
+                  before: 400,
+                  after: 200,
+                },
+              }),
+              ...result.factCheck.sources.map(source => [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: source.title,
+                      bold: true,
+                    }),
+                  ],
+                }),
+                new Paragraph({
+                  children: [
+                    new ExternalHyperlink({
+                      children: [
+                        new TextRun({
+                          text: source.url,
+                          style: "Hyperlink",
+                        }),
+                      ],
+                      link: source.url,
+                    }),
+                  ],
+                  spacing: {
+                    after: 200,
+                  },
+                }),
+              ]).flat(),
+            ] : []),
+
+            // Footer
+            new Paragraph({
+              text: "Generated by AI Fake News Detector",
+              alignment: AlignmentType.CENTER,
+              spacing: {
+                before: 400,
+              },
+            }),
+          ],
+        }],
       });
 
-      // PDF Header
-      pdf.setFillColor(33, 64, 175); // Primary blue color
-      pdf.circle(30, 20, 8, 'F');
-      
-      pdf.setFontSize(24);
-      pdf.setTextColor(33, 64, 175);
-      pdf.text('AI Fake News Analysis Report', 45, 25);
-
-      // Add timestamp and report ID
-      pdf.setFontSize(10);
-      pdf.setTextColor(100);
-      const reportId = Math.random().toString(36).substring(2, 15);
-      pdf.text(`Report ID: ${reportId}`, 45, 32);
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, 45, 37);
-
-      // Add QR verification code
-      pdf.addImage(qrCode, 'PNG', 160, 10, 30, 30);
-      pdf.setFontSize(8);
-      pdf.text('Scan to verify', 165, 43);
-
-      // Credibility Score Section
-      pdf.setFontSize(16);
-      pdf.setTextColor(0);
-      pdf.text('Credibility Assessment', 20, 55);
-      
-      // Add score indicator
-      const scoreColor = result.credibilityScore >= 80 ? '#22c55e' : 
-                        result.credibilityScore >= 60 ? '#eab308' : '#ef4444';
-      pdf.setFillColor(scoreColor);
-      pdf.circle(30, 65, 8, 'F');
-      pdf.setFontSize(20);
-      pdf.setTextColor(0);
-      pdf.text(`${result.credibilityScore}/100`, 45, 68);
-
-      // Analyzed Content Section
-      pdf.setFontSize(14);
-      pdf.text('Analyzed Content', 20, 85);
-      pdf.setFontSize(10);
-      const textLines = pdf.splitTextToSize(text, 170);
-      pdf.text(textLines, 20, 92);
-
-      // Calculate height needed for text
-      const textHeight = (textLines.length * 3.5); // 3.5mm per line
-      const startY = 95 + textHeight;
-
-      // Add analysis results image
-      const imgWidth = 170;
-      const imgHeight = 100;
-      pdf.addImage(dataUrl, 'PNG', 20, startY, imgWidth, imgHeight);
-
-      // Key Findings Section
-      let yPos = startY + imgHeight + 10;
-      
-      pdf.setFontSize(14);
-      pdf.text('Key Findings', 20, yPos);
-      yPos += 8;
-
-      // Add fact check results
-      pdf.setFontSize(10);
-      pdf.text(`Factual Assessment: ${result.factCheck.isFactual ? '✓ Verified' : '⚠ Unverified'}`, 25, yPos);
-      yPos += 5;
-      
-      const explanationLines = pdf.splitTextToSize(result.factCheck.explanation, 160);
-      pdf.text(explanationLines, 25, yPos);
-      yPos += (explanationLines.length * 5) + 5;
-
-      // Add warnings if any
-      if (result.warnings.length > 0) {
-        pdf.setFontSize(12);
-        pdf.setTextColor(220, 38, 38); // Red for warnings
-        pdf.text('Warnings:', 20, yPos);
-        yPos += 5;
-        pdf.setFontSize(10);
-        result.warnings.forEach(warning => {
-          const warningLines = pdf.splitTextToSize(`• ${warning}`, 160);
-          pdf.text(warningLines, 25, yPos);
-          yPos += (warningLines.length * 5);
-        });
-        yPos += 5;
-      }
-
-      // Add suggestions
-      if (result.suggestions.length > 0) {
-        pdf.setFontSize(12);
-        pdf.setTextColor(33, 64, 175); // Blue for suggestions
-        pdf.text('Suggestions:', 20, yPos);
-        yPos += 5;
-        pdf.setFontSize(10);
-        result.suggestions.forEach(suggestion => {
-          const suggestionLines = pdf.splitTextToSize(`• ${suggestion}`, 160);
-          pdf.text(suggestionLines, 25, yPos);
-          yPos += (suggestionLines.length * 5);
-        });
-      }
-
-      // Add footer with page numbers
-      const pageCount = pdf.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150);
-        pdf.text(
-          `Generated by AI Fake News Detector | Page ${i} of ${pageCount}`,
-          pdf.internal.pageSize.getWidth() / 2,
-          pdf.internal.pageSize.getHeight() - 10,
-          { align: 'center' }
-        );
-      }
-
-      pdf.save('fake-news-analysis.pdf');
+      // Generate and save document
+      const buffer = await Packer.toBlob(doc);
+      saveAs(buffer, 'fake-news-analysis.docx');
     } catch (error) {
-      console.error('PDF generation failed:', error);
+      console.error('Word document generation failed:', error);
     }
   };
 
@@ -254,19 +348,16 @@ Generated by AI Fake News Detector`;
 
     try {
       if (canShare) {
-        // Use native share if available and in a secure context
         await navigator.share({
           title: 'AI Fake News Analysis',
           text: shareText,
         });
       } else {
-        // Fallback to clipboard
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
     } catch (error) {
-      // If share fails, fallback to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
@@ -280,9 +371,9 @@ Generated by AI Fake News Detector`;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4">
-        <Button onClick={generatePDF} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Generate PDF Report
+        <Button onClick={generateWordDoc} className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Export to Word
         </Button>
         <Button onClick={generateVerificationBadge} variant="outline" className="flex items-center gap-2">
           <Badge className="h-4 w-4" />
@@ -306,7 +397,7 @@ Generated by AI Fake News Detector`;
       <div className="bg-muted p-4 rounded-lg">
         <h3 className="text-sm font-medium mb-2">About Reports</h3>
         <p className="text-sm text-muted-foreground">
-          PDF reports include detailed analysis, verification QR code, and timestamped results.
+          Word documents include detailed analysis, verification QR code, and timestamped results.
           Verification badges can be embedded in websites or shared on social media.
         </p>
       </div>
