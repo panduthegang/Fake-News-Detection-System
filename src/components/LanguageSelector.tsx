@@ -20,11 +20,12 @@ export const LanguageSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Languages className="h-5 w-5" />
+        <Button variant="outline" className="w-full justify-start">
+          <Languages className="h-4 w-4 mr-2" />
+          {languages.find(lang => lang.code === i18n.language)?.name || 'Language'}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-[160px]">
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
