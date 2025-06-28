@@ -12,6 +12,7 @@ import {
 const languages = [
   { code: 'en', name: 'English' },
   { code: 'hi', name: 'हिंदी' },
+  { code: 'gu', name: 'ગુજરાતી' },
 ];
 
 export const LanguageSelector = () => {
