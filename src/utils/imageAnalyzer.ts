@@ -6,28 +6,60 @@ const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
 // Helper function to get localized sentiment labels
 const getLocalizedSentimentLabel = (label: string): string => {
-  if (i18n.language === 'gu') {
-    switch (label.toLowerCase()) {
-      case 'positive': return 'હકારાત્મક';
-      case 'negative': return 'નકારાત્મક';
-      case 'neutral': return 'તટસ્થ';
-      default: return label;
-    }
+  switch (i18n.language) {
+    case 'gu':
+      switch (label.toLowerCase()) {
+        case 'positive': return 'હકારાત્મક';
+        case 'negative': return 'નકારાત્મક';
+        case 'neutral': return 'તટસ્થ';
+        default: return label;
+      }
+    case 'hi':
+      switch (label.toLowerCase()) {
+        case 'positive': return 'सकारात्मक';
+        case 'negative': return 'नकारात्मक';
+        case 'neutral': return 'तटस्थ';
+        default: return label;
+      }
+    case 'mr':
+      switch (label.toLowerCase()) {
+        case 'positive': return 'सकारात्मक';
+        case 'negative': return 'नकारात्मक';
+        case 'neutral': return 'तटस्थ';
+        default: return label;
+      }
+    default:
+      return label;
   }
-  return label;
 };
 
 // Helper function to get localized readability levels
 const getLocalizedReadabilityLevel = (level: string): string => {
-  if (i18n.language === 'gu') {
-    switch (level) {
-      case 'Easy': return 'સરળ';
-      case 'Medium': return 'મધ્યમ';
-      case 'Hard': return 'મુશ્કેલ';
-      default: return level;
-    }
+  switch (i18n.language) {
+    case 'gu':
+      switch (level) {
+        case 'Easy': return 'સરળ';
+        case 'Medium': return 'મધ્યમ';
+        case 'Hard': return 'મુશ્કેલ';
+        default: return level;
+      }
+    case 'hi':
+      switch (level) {
+        case 'Easy': return 'आसान';
+        case 'Medium': return 'मध्यम';
+        case 'Hard': return 'कठिन';
+        default: return level;
+      }
+    case 'mr':
+      switch (level) {
+        case 'Easy': return 'सोपे';
+        case 'Medium': return 'मध्यम';
+        case 'Hard': return 'कठीण';
+        default: return level;
+      }
+    default:
+      return level;
   }
-  return level;
 };
 
 export const analyzeImage = async (imageData: string): Promise<AnalysisResult> => {
@@ -67,11 +99,13 @@ export const analyzeImage = async (imageData: string): Promise<AnalysisResult> =
     // If language is not English, translate the extracted text
     if (i18n.language !== 'en') {
       const translationPrompt = `Translate the following English text to ${
-        i18n.language === 'hi' ? 'Hindi' : 'Gujarati'
+        i18n.language === 'hi' ? 'Hindi' : 
+        i18n.language === 'gu' ? 'Gujarati' :
+        i18n.language === 'mr' ? 'Marathi' : 'English'
       }. Follow these rules:
       1. Maintain all paragraph breaks and formatting
       2. Keep numbers, dates, and proper nouns as is
-      3. Use proper ${i18n.language === 'hi' ? 'Hindi' : 'Gujarati'} punctuation
+      3. Use proper punctuation
       4. Preserve any headings or section breaks
       5. Keep the same text structure and layout
       
@@ -92,11 +126,15 @@ ${extractedText}`;
     // Now analyze the text in the selected language
     const analysisPrompt = `Analyze this article text in ${
       i18n.language === 'hi' ? 'Hindi' : 
-      i18n.language === 'gu' ? 'Gujarati' : 
+      i18n.language === 'gu' ? 'Gujarati' :
+      i18n.language === 'mr' ? 'Marathi' :
       'English'
     } language. ${
       i18n.language !== 'en' ? `Provide all analysis output in ${
-        i18n.language === 'hi' ? 'Hindi' : 'Gujarati'
+        i18n.language === 'hi' ? 'Hindi' :
+        i18n.language === 'gu' ? 'Gujarati' :
+        i18n.language === 'mr' ? 'Marathi' :
+        'English'
       }.` : ''
     } Provide a detailed analysis including credibility assessment, fact-checking, and content evaluation.
 
@@ -209,6 +247,11 @@ function extractKeywords(text: string): string[] {
       'છે', 'અને', 'તે', 'એક', 'માં', 'ના', 'ની', 'નું', 'થી', 'પર', 'જે', 'કે',
       'હતું', 'હતી', 'હતા', 'છું', 'છો', 'આ', 'તો', 'પણ', 'જો', 'શું', 'હવે',
       'કોઈ', 'કયું', 'રહ્યો', 'રહી', 'સાથે', 'હોય', 'કરી'
+    ]),
+    mr: new Set([
+      'आहे', 'आणि', 'ते', 'एक', 'मध्ये', 'चा', 'ची', 'चे', 'ने', 'वर', 'जो', 'की',
+      'होता', 'होती', 'होते', 'आहे', 'आहेस', 'हा', 'तर', 'पण', 'जर', 'काय', 'आता',
+      'कोणी', 'केला', 'राहतो', 'राहते', 'सोबत', 'असेल', 'केले'
     ])
   };
 
@@ -239,17 +282,20 @@ function countEmotionalWords(text: string, type: 'positive' | 'negative' | 'urge
     positive: {
       en: ['good', 'great', 'excellent', 'amazing', 'wonderful', 'positive', 'success', 'breakthrough'],
       hi: ['अच्छा', 'बेहतर', 'उत्कृष्ट', 'अद्भुत', 'शानदार', 'सकारात्मक', 'सफलता', 'प्रगति'],
-      gu: ['સારું', 'શ્રેષ્ઠ', 'ઉત્તમ', 'અદ્ભુત', 'શાનદાર', 'સકારાત્મક', 'સફળતા', 'પ્રગતિ']
+      gu: ['સારું', 'શ્રેષ્ઠ', 'ઉત્તમ', 'અદ્ભુત', 'શાનદાર', 'સકારાત્મક', 'સફળતા', 'પ્રગતિ'],
+      mr: ['चांगले', 'उत्तम', 'उत्कृष्ट', 'अद्भुत', 'शानदार', 'सकारात्मक', 'यशस्वी', 'प्रगती']
     },
     negative: {
       en: ['bad', 'terrible', 'awful', 'horrible', 'poor', 'negative', 'failure', 'crisis'],
       hi: ['बुरा', 'खराब', 'भयानक', 'घटिया', 'नकारात्मक', 'असफलता', 'संकट', 'समस्या'],
-      gu: ['ખરાબ', 'નબળું', 'ભયાનક', 'નિરાશાજનક', 'નકારાત્મક', 'નિષ્ફળતા', 'સંકટ', 'સમસ્યા']
+      gu: ['ખરાબ', 'નબળું', 'ભયાનક', 'નિરાશાજનક', 'નકારાત્મક', 'નિષ્ફળતા', 'સંકટ', 'સમસ્યા'],
+      mr: ['वाईट', 'भयंकर', 'वाईट', 'खराब', 'नकारात्मक', 'अपयश', 'संकट', 'समस्या']
     },
     urgent: {
       en: ['breaking', 'urgent', 'emergency', 'crisis', 'immediately', 'critical', 'vital', 'crucial'],
       hi: ['तत्काल', 'जरूरी', 'आपातकालीन', 'संकट', 'तुरंत', 'महत्वपूर्ण', 'आवश्यक', 'गंभीर'],
-      gu: ['તાત્કાલિક', 'તાકીદનું', 'કટોકટી', 'સંકટ', 'તરત', 'મહત્વપૂર્ણ', 'આવશ્યક', 'ગંભીર']
+      gu: ['તાત્કાલિક', 'તાકીદનું', 'કટોકટી', 'સંકટ', 'તરત', 'મહત્વપૂર્ણ', 'આવશ્યક', 'ગંભીર'],
+      mr: ['ताबडतोब', 'तातडीचे', 'आणीबाणी', 'संकट', 'त्वरित', 'महत्त्वाचे', 'आवश्यक', 'गंभीर']
     }
   };
   
