@@ -35,6 +35,7 @@ import { HistoryPanel } from '@/components/HistoryPanel';
 import { Link } from 'react-router-dom';
 import { ArticleAnalysisSkeleton } from '@/components/ArticleAnalysisSkeleton';
 import { AnimatedCredibilityMeter } from '@/components/AnimatedCredibilityMeter';
+import { UserNav } from '@/components/UserNav'; // Placeholder import - adjust path as needed
 
 export const ArticleAnalysisPage: React.FC = () => {
   const { t } = useTranslation();
@@ -310,6 +311,7 @@ export const ArticleAnalysisPage: React.FC = () => {
                 </Button>
                 <LanguageSelector />
                 <ThemeToggle />
+                <UserNav />
               </div>
               <div className="md:hidden">
                 <MobileSidebar
@@ -432,7 +434,7 @@ export const ArticleAnalysisPage: React.FC = () => {
                         size="lg"
                         className="relative overflow-hidden group"
                       >
-                        <div className="absolute inset-0 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                         {isAnalyzing ? (
                           <>
                             <Loader2 className="animate-spin mr-2" />
