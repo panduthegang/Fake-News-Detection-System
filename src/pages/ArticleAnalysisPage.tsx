@@ -277,7 +277,7 @@ export const ArticleAnalysisPage: React.FC = () => {
                   size="icon"
                   asChild
                 >
-                  <Link to="/" state={{ skipLanding: true }}>
+                  <Link to="/dashboard" state={{ skipLanding: true }}>
                     <Home className="h-5 w-5" />
                   </Link>
                 </Button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -42,6 +42,8 @@ import { VoiceInput } from '@/components/VoiceInput';
 import { LandingPage } from './LandingPage';
 import { Particles } from '@/components/Particles';
 import { UserNav } from '@/components/UserNav';
+import { useAuth } from '@/components/AuthProvider';
+import { saveAnalysis, getAnalysisHistory, deleteAnalysis } from '@/lib/firestore';
 
 interface HomePageProps {
   showLanding?: boolean;
@@ -49,6 +51,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [text, setText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -63,19 +66,29 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   const [showLandingPage, setShowLandingPage] = useState(showLanding);
   const [sparkles, setSparkles] = useState([]);
   const [isListening, setIsListening] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem('analysis-history');
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
-    }
-
     const skipLanding = localStorage.getItem('skipLanding') === 'true';
     if (skipLanding) {
       setShowLandingPage(false);
       setShowAnalyzer(true);
     }
-  }, []);
+
+    if (user) {
+      loadHistory();
+    }
+  }, [user]);
+
+  const loadHistory = async () => {
+    if (!user) return;
+    try {
+      const userHistory = await getAnalysisHistory(user.uid);
+      setHistory(userHistory);
+    } catch (error) {
+      console.error('Error loading history:', error);
+    }
+  };
 
   const handleStartAnalyzing = () => {
     setShowLandingPage(false);
@@ -175,7 +188,7 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
   };
 
   const handleAnalysis = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !user) return;
     
     setIsAnalyzing(true);
     try {
@@ -190,9 +203,8 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
         statistics: analysis.statistics
       };
       
-      const updatedHistory = [newAnalysis, ...history].slice(0, 10);
-      setHistory(updatedHistory);
-      localStorage.setItem('analysis-history', JSON.stringify(updatedHistory));
+      await saveAnalysis(user.uid, newAnalysis);
+      await loadHistory();
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
@@ -251,10 +263,14 @@ export const HomePage: React.FC<HomePageProps> = ({ showLanding = true }) => {
     setShowHistory(false);
   };
 
-  const handleHistoryDelete = (id: string) => {
-    const updatedHistory = history.filter(item => item.id !== id);
-    setHistory(updatedHistory);
-    localStorage.setItem('analysis-history', JSON.stringify(updatedHistory));
+  const handleHistoryDelete = async (id: string) => {
+    if (!user) return;
+    try {
+      await deleteAnalysis(user.uid, id);
+      setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Error deleting analysis:', error);
+    }
   };
 
   return (

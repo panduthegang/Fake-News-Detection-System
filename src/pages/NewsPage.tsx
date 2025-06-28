@@ -620,7 +620,7 @@ const NewsPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" size="icon" asChild>
-                  <Link to="/">
+                  <Link to="/dashboard">
                     <Home className="h-5 w-5" />
                   </Link>
                 </Button>
