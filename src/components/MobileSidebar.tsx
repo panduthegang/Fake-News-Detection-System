@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from './ui/sheet';
 import { Button } from './ui/button';
-import { Menu, History, Sun, Moon, Info, Zap, ArrowLeft, Languages } from 'lucide-react';
+import { Menu, History, Sun, Moon, Info, Zap, ArrowLeft, Languages, Camera, Home } from 'lucide-react';
 import { useTheme } from './theme-provider';
 import { cn } from '@/lib/utils';
 import { LanguageSelector } from './LanguageSelector';
@@ -21,7 +21,8 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const isAboutPage = location.pathname === '/about';
-  const isAnalyzerVisible = !isAboutPage && onBackHome;
+  const isArticleAnalysisPage = location.pathname === '/article-analysis';
+  const isAnalyzerVisible = !isAboutPage && !isArticleAnalysisPage && onBackHome;
 
   return (
     <Sheet>
@@ -58,20 +59,20 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 </Button>
               )}
 
-              {isAboutPage && (
+              {(isAboutPage || isArticleAnalysisPage) && (
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2 h-11"
                   asChild
                 >
-                  <Link to="/">
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Analysis
+                  <Link to="/home-page" state={{ skipLanding: true }}>
+                    <Home className="h-4 w-4" />
+                    News Analyzer
                   </Link>
                 </Button>
               )}
 
-              {!isAboutPage && (
+              {!isAboutPage && !isArticleAnalysisPage && (
                 <Button
                   variant="ghost"
                   className={cn(
@@ -82,6 +83,19 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
                 >
                   <History className="h-4 w-4" />
                   Analysis History
+                </Button>
+              )}
+
+              {!isArticleAnalysisPage && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 h-11"
+                  asChild
+                >
+                  <Link to="/article-analysis">
+                    <Camera className="h-4 w-4" />
+                    Article Analysis
+                  </Link>
                 </Button>
               )}
 
