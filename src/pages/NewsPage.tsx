@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { 
   Newspaper,
   Globe,
@@ -18,16 +19,26 @@ import {
   Languages,
   Brain,
   BarChart2,
-  Home
+  Home,
+  ArrowRight,
+  Loader2,
+  Image as ImageIcon,
+  Tag,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { MobileSidebar } from '@/components/MobileSidebar';
 import { analyzeText } from '@/utils/newsAnalyzer';
-
-import Particles from 'react-tsparticles';
-import { loadFull } from 'tsparticles';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 
 interface NewsItem {
   title: string;
@@ -39,64 +50,95 @@ interface NewsItem {
   credibilityScore?: number;
   isFactual?: boolean;
   warnings?: string[];
+  thumbnail?: string;
+  category?: string;
+}
+
+interface SpeechState {
+  isPlaying: boolean;
+  currentArticleId: string | null;
 }
 
 const RSS_FEEDS = [
   {
     url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
     name: 'NY Times',
-    icon: '🗽'
+    icon: '📰',
+    category: 'International'
   },
   {
     url: 'http://feeds.bbci.co.uk/news/rss.xml',
     name: 'BBC News',
-    icon: '🇬🇧'
+    icon: '🌍',
+    category: 'International'
   },
   {
     url: 'https://www.theguardian.com/world/rss',
     name: 'The Guardian',
-    icon: '📰'
+    icon: '🦉',
+    category: 'International'
+  },
+  {
+    url: 'https://www.aljazeera.com/xml/rss/all.xml',
+    name: 'Al Jazeera',
+    icon: '🌐',
+    category: 'International'
+  },
+  {
+    url: 'https://www.france24.com/en/rss',
+    name: 'France 24',
+    icon: '🇫🇷',
+    category: 'International'
   },
   {
     url: 'https://feeds.feedburner.com/ndtvnews-top-stories',
     name: 'NDTV',
-    icon: '🇮🇳'
+    icon: '🛡️',
+    category: 'Indian'
   },
   {
     url: 'https://www.thehindu.com/news/national/feeder/default.rss',
     name: 'The Hindu',
-    icon: '🇮🇳'
+    icon: '🏛️',
+    category: 'Indian'
   },
+  {
+    url: 'https://indianexpress.com/feed/',
+    name: 'Indian Express',
+    icon: '📰',
+    category: 'Indian'
+  },
+  {
+    url: 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms',
+    name: 'Times of India',
+    icon: '🗞️',
+    category: 'Indian'
+  }
 ];
 
-const CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?',
-  'https://proxy.cors.sh/',
-];
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+const inferCategory = (title: string, content: string): string => {
+  const text = (title + ' ' + content).toLowerCase();
+  if (text.includes('politics') || text.includes('election') || text.includes('government')) return 'Politics';
+  if (text.includes('sport') || text.includes('tennis') || text.includes('football') || text.includes('cricket')) return 'Sports';
+  if (text.includes('tech') || text.includes('technology') || text.includes('ai') || text.includes('software')) return 'Technology';
+  if (text.includes('business') || text.includes('economy') || text.includes('finance')) return 'Business';
+  if (text.includes('health') || text.includes('medical') || text.includes('disease')) return 'Health';
+  return 'General';
+};
 
 async function fetchWithCorsProxy(url: string): Promise<Response> {
-  let lastError;
-  
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const response = await fetch(proxy + encodeURIComponent(url), {
-        headers: {
-          'Accept': 'application/xml, text/xml, */*',
-          'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot/1.0)'
-        }
-      });
-      
-      if (response.ok) {
-        return response;
-      }
-    } catch (error) {
-      console.warn(`Proxy ${proxy} failed:`, error);
-      lastError = error;
+  try {
+    const response = await fetch(CORS_PROXY + encodeURIComponent(url));
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response;
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error);
+    throw error;
   }
-  
-  throw lastError || new Error('All CORS proxies failed');
 }
 
 function parseRSS(xml: string): NewsItem[] {
@@ -123,6 +165,8 @@ function parseRSS(xml: string): NewsItem[] {
         .replace(/ /g, ' ')
         .replace(/\s+/g, ' ')
         .trim() || 'No content available';
+      const thumbnail = item.querySelector('media\\:content, enclosure')?.getAttribute('url') || '';
+      const category = inferCategory(title, contentSnippet);
 
       return {
         title,
@@ -131,6 +175,8 @@ function parseRSS(xml: string): NewsItem[] {
         content,
         contentSnippet,
         source: '',
+        thumbnail,
+        category,
       };
     });
   } catch (error) {
@@ -139,28 +185,242 @@ function parseRSS(xml: string): NewsItem[] {
   }
 }
 
+const NewsCardSkeleton = () => (
+  <div className="relative bg-background/95 border border-border/20 rounded-lg p-6 h-full shadow-lg hover:shadow-xl transition-all duration-300">
+    {/* Match the NewsCard's outer container styles */}
+    <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
+        <div className="h-4 w-24 bg-primary/20 rounded animate-pulse" />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-primary/20 rounded animate-pulse" />
+        <div className="w-8 h-8 bg-primary/20 rounded animate-pulse" />
+      </div>
+    </div>
+
+    {/* Placeholder for thumbnail */}
+    <div className="mb-4">
+      <div className="w-full h-40 bg-primary/20 rounded-md animate-pulse" />
+    </div>
+
+    {/* Placeholder for category */}
+    <div className="flex items-center gap-2 mb-2">
+      <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
+      <div className="h-4 w-20 bg-primary/20 rounded animate-pulse" />
+    </div>
+
+    {/* Placeholder for title */}
+    <div className="space-y-2 mb-4">
+      <div className="h-6 w-3/4 bg-primary/20 rounded animate-pulse" />
+      <div className="h-6 w-1/2 bg-primary/20 rounded animate-pulse" />
+    </div>
+
+    {/* Placeholder for content snippet */}
+    <div className="space-y-2 mb-4">
+      <div className="h-4 w-full bg-primary/20 rounded animate-pulse" />
+      <div className="h-4 w-full bg-primary/20 rounded animate-pulse" />
+      <div className="h-4 w-2/3 bg-primary/20 rounded animate-pulse" />
+    </div>
+
+    {/* Placeholder for footer */}
+    <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/20">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 bg-primary/20 rounded animate-pulse" />
+        <div className="h-4 w-24 bg-primary/20 rounded animate-pulse" />
+      </div>
+      <div className="h-8 w-24 bg-primary/20 rounded animate-pulse" />
+    </div>
+  </div>
+);
+
+const cardVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  hover: { 
+    y: -5,
+    transition: { duration: 0.2 }
+  }
+};
+
+const ModernSelect = ({ value, onChange, options, placeholder, ariaLabel }) => (
+  <div className="relative group min-w-[180px]">
+    <div className="absolute inset-0 bg-primary/10 rounded-xl blur transition-all duration-300 group-hover:bg-primary/20" />
+    <select
+      value={value}
+      onChange={onChange}
+      className="relative h-12 w-full rounded-xl border-2 border-primary/20 bg-background/95 backdrop-blur-md px-4 shadow-lg transition-all duration-300 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary text-lg appearance-none cursor-pointer pl-10"
+      aria-label={ariaLabel}
+    >
+      <option value="all">{placeholder}</option>
+      {options.map(option => (
+        <option key={option.value} value={option.value}>
+          {option.icon} {option.label}
+        </option>
+      ))}
+    </select>
+    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+      <Globe className="h-5 w-5 text-primary/70" />
+    </div>
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+      <svg className="h-5 w-5 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </div>
+);
+
 const NewsPage: React.FC = () => {
+  const { i18n } = useTranslation();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<string | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzingArticles, setAnalyzingArticles] = useState<Set<string>>(new Set());
   const [expandedContent, setExpandedContent] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [sparkles, setSparkles] = useState([]);
+  const [speechState, setSpeechState] = useState<SpeechState>({
+    isPlaying: false,
+    currentArticleId: null
+  });
+  const itemsPerPage = 8;
 
-  const particlesInit = async (main: any) => {
-    await loadFull(main);
+  const speak = (text: string, articleId: string) => {
+    window.speechSynthesis.cancel();
+
+    if (speechState.isPlaying && speechState.currentArticleId === articleId) {
+      window.speechSynthesis.cancel();
+      setSpeechState({ isPlaying: false, currentArticleId: null });
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 0.8;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => 
+      voice.name.includes('Google') ||
+      voice.name.includes('Natural') ||
+      voice.name.includes(i18n.language === 'hi' ? 'Hindi' :
+                         i18n.language === 'gu' ? 'Gujarati' :
+                         i18n.language === 'mr' ? 'Marathi' : 'English')
+    );
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    utterance.onend = () => {
+      setSpeechState({ isPlaying: false, currentArticleId: null });
+    };
+
+    window.speechSynthesis.speak(utterance);
+    setSpeechState({ isPlaying: true, currentArticleId: articleId });
   };
+
+  useEffect(() => {
+    const generateSparkles = () => {
+      const newSparkles = [];
+      const gridSize = 4;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      const horizontalLines = Math.floor(viewportHeight / (gridSize * 16));
+      const verticalLines = Math.floor(viewportWidth / (gridSize * 16));
+      
+      const sparkleCount = Math.floor(Math.random() * 6) + 5;
+      
+      for (let i = 0; i < sparkleCount; i++) {
+        const isHorizontal = Math.random() > 0.5;
+        
+        if (isHorizontal) {
+          const lineIndex = Math.floor(Math.random() * horizontalLines);
+          newSparkles.push({
+            id: `sparkle-${Date.now()}-${i}`,
+            x: Math.random() * viewportWidth,
+            y: lineIndex * gridSize * 16,
+            size: Math.random() * 4 + 2,
+            opacity: Math.random() * 0.5 + 0.5,
+            speed: Math.random() * 2 + 1,
+            direction: Math.random() > 0.5 ? 1 : -1,
+            isHorizontal: true,
+          });
+        } else {
+          const lineIndex = Math.floor(Math.random() * verticalLines);
+          newSparkles.push({
+            id: `sparkle-${Date.now()}-${i}`,
+            x: lineIndex * gridSize * 16,
+            y: Math.random() * viewportHeight,
+            size: Math.random() * 4 + 2,
+            opacity: Math.random() * 0.5 + 0.5,
+            speed: Math.random() * 2 + 1,
+            direction: Math.random() > 0.5 ? 1 : -1,
+            isHorizontal: false,
+          });
+        }
+      }
+      
+      setSparkles(newSparkles);
+    };
+    
+    generateSparkles();
+    const interval = setInterval(generateSparkles, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (sparkles.length === 0) return;
+    
+    const animateSparkles = () => {
+      setSparkles(prevSparkles => 
+        prevSparkles.map(sparkle => {
+          if (sparkle.isHorizontal) {
+            let newAX = sparkle.x + (sparkle.speed * sparkle.direction);
+            if (newAX < 0 || newAX > window.innerWidth) {
+              sparkle.direction *= -1;
+              newAX = sparkle.x + (sparkle.speed * sparkle.direction);
+            }
+            return { ...sparkle, x: newAX };
+          } else {
+            let newAY = sparkle.y + (sparkle.speed * sparkle.direction);
+            if (newAY < 0 || newAY > window.innerHeight) {
+              sparkle.direction *= -1;
+              newAY = sparkle.y + (sparkle.speed * sparkle.direction);
+            }
+            return { ...sparkle, y: newAY };
+          }
+        })
+      );
+    };
+    
+    const animationFrame = requestAnimationFrame(animateSparkles);
+    const interval = setInterval(animateSparkles, 50);
+    
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      clearInterval(interval);
+    };
+  }, [sparkles]);
 
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
     setFailedSources([]);
+    setIsRefreshing(true);
     const allNews: NewsItem[] = [];
     const failed: string[] = [];
+    const seenLinks = new Set<string>();
 
     try {
       await Promise.all(RSS_FEEDS.map(async feed => {
@@ -173,10 +433,18 @@ const NewsPage: React.FC = () => {
             throw new Error('No items found in feed');
           }
           
-          const newsWithSource = items.map(item => ({
-            ...item,
-            source: feed.name
-          }));
+          const newsWithSource = items
+            .filter(item => {
+              if (seenLinks.has(item.link)) {
+                return false;
+              }
+              seenLinks.add(item.link);
+              return true;
+            })
+            .map(item => ({
+              ...item,
+              source: feed.name
+            }));
           
           allNews.push(...newsWithSource);
         } catch (feedError) {
@@ -202,6 +470,7 @@ const NewsPage: React.FC = () => {
       console.error('News fetch error:', err);
     } finally {
       setLoading(false);
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -212,8 +481,8 @@ const NewsPage: React.FC = () => {
   }, []);
 
   const analyzeArticle = async (article: NewsItem) => {
-    if (analyzing) return;
-    setAnalyzing(true);
+    if (analyzingArticles.has(article.link)) return;
+    setAnalyzingArticles(prev => new Set(prev).add(article.link));
     
     try {
       const textToAnalyze = article.contentSnippet || article.title;
@@ -234,76 +503,102 @@ const NewsPage: React.FC = () => {
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
-      setAnalyzing(false);
+      setAnalyzingArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(article.link);
+        return newSet;
+      });
+    }
+  };
+
+  const shareArticle = (article: NewsItem) => {
+    const shareText = `${article.title} - ${article.source}`;
+    const shareUrl = article.link;
+
+    if (navigator.share) {
+      navigator.share({
+        title: article.title,
+        text: shareText,
+        url: shareUrl,
+      }).catch(err => console.error('Share failed:', err));
+    } else {
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+      const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+
+      const shareWindow = window.open('', '_blank', 'width=600,height=400');
+      shareWindow.document.write(`
+        <html>
+          <body style="padding: 20px; font-family: Arial, sans-serif;">
+            <h2>Share this article</h2>
+            <p><a href="${twitterUrl}" target="_blank">Share on Twitter</a></p>
+            <p><a href="${whatsappUrl}" target="_blank">Share on WhatsApp</a></p>
+            <p><a href="${facebookUrl}" target="_blank">Share on Facebook</a></p>
+            <p><a href="#" onclick="window.close()">Close</a></p>
+          </body>
+        </html>
+      `);
     }
   };
 
   const filteredNews = news.filter(item => {
     const matchesSource = selectedSource === 'all' || item.source === selectedSource;
+    const matchesCategory = selectedCategory === 'all' || 
+      RSS_FEEDS.find(feed => feed.name === item.source)?.category === selectedCategory;
     const matchesSearch = !searchQuery || 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.contentSnippet?.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSource && matchesSearch;
+    return matchesSource && matchesCategory && matchesSearch;
   });
 
-  const sortedNews = [...filteredNews].sort((a, b) => 
-    new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
+  const uniqueNews = Array.from(
+    new Map(filteredNews.map(item => [item.link, item])).values()
   );
+
+  const paginatedNews = uniqueNews.slice(0, page * itemsPerPage);
+  const hasMore = paginatedNews.length < uniqueNews.length;
+
+  const categoryOptions = [
+    { value: 'all', label: 'All Categories', icon: '🌐' },
+    { value: 'International', label: 'International', icon: '🌍' },
+    { value: 'Indian', label: 'Indian', icon: '🇮🇳' },
+  ];
+
+  const sourceOptions = RSS_FEEDS
+    .filter(feed => selectedCategory === 'all' || feed.category === selectedCategory)
+    .map(feed => ({
+      value: feed.name,
+      label: feed.name,
+      icon: feed.icon
+    }));
 
   return (
     <div className="min-h-screen relative">
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        options={{
-          background: {
-            color: {
-              value: "transparent",
-            },
-          },
-          fpsLimit: 60,
-          particles: {
-            number: {
-              value: 50,
-              density: {
-                enable: true,
-                value_area: 800,
-              },
-            },
-            color: {
-              value: "#93c5fd",
-            },
-            shape: {
-              type: "circle",
-            },
-            opacity: {
-              value: 0.5,
-              random: true,
-            },
-            size: {
-              value: 3,
-              random: true,
-            },
-            move: {
-              enable: true,
-              speed: 1,
-              direction: "none",
-              random: true,
-              straight: false,
-              out_mode: "out",
-              bounce: false,
-            },
-          },
-          detectRetina: true,
-        }}
-        className="absolute inset-0 z-0"
-      />
-
       <div className="fixed inset-0 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/80" />
       
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-50 transition-opacity duration-300" />
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:4rem_4rem] dark:bg-[linear-gradient(to_right,#334155_1px,transparent_1px),linear_gradient(to_bottom,#334155_1px,transparent_1px)] opacity-75 transition-opacity duration-300" />
       
       <div className="fixed inset-0 bg-[radial-gradient(100%_100%_at_50%_0%,#ffffff_0%,rgba(255,255,255,0)_100%)] dark:bg-[radial-gradient(100%_100%_at_50%_0%,rgba(30,41,59,0.5)_0%,rgba(30,41,59,0)_100%)]" />
+      
+      <div className="fixed inset-0" />
+      
+      <div className="fixed inset-0 pointer-events-none z-10">
+        {sparkles.map(sparkle => (
+          <div
+            key={sparkle.id}
+            className="absolute rounded-full bg-blue-400 dark:bg-blue-500 animate-pulse"
+            style={{
+              left: `${sparkle.x}px`,
+              top: `${sparkle.y}px`,
+              width: `${sparkle.size}px`,
+              height: `${sparkle.size}px`,
+              opacity: sparkle.opacity,
+              boxShadow: `0 0 ${sparkle.size * 2}px ${sparkle.size}px rgba(59, 130, 246, 0.5)`,
+              transition: 'transform 0.2s linear'
+            }}
+          />
+        ))}
+      </div>
 
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="max-w-7xl mx-auto">
@@ -338,7 +633,6 @@ const NewsPage: React.FC = () => {
                     <Info className="h-5 w-5" />
                   </Link>
                 </Button>
-                <LanguageSelector />
                 <ThemeToggle />
               </div>
               <div className="md:hidden">
@@ -369,178 +663,365 @@ const NewsPage: React.FC = () => {
             </p>
           </motion.div>
 
-          <div className="flex flex-wrap gap-4 mb-8 items-center">
-            <div className="flex-1 min-w-[300px]">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  type="search"
-                  placeholder="Search articles by title or content..."
-                  className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-primary/20 bg-background/90 backdrop-blur-md shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/70 text-lg"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            <select
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="h-12 rounded-xl border-2 border-primary/20 bg-background/90 backdrop-blur-md px-4 shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary text-lg"
-            >
-              <option value="all">All Sources</option>
-              {RSS_FEEDS.map(feed => (
-                <option key={feed.name} value={feed.name}>
-                  {feed.icon} {feed.name}
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="outline"
-              onClick={fetchNews}
-              className="h-12 px-6 rounded-xl shadow-lg"
-            >
-              <RefreshCw className="mr-2 h-5 w-5" />
-              Refresh
-            </Button>
-          </div>
-
-          {failedSources.length > 0 && (
-            <div className="mb-6 rounded-lg border bg-card/50 backdrop-blur-sm p-4">
-              <div className="flex items-center gap-2 text-warning">
-                <AlertTriangle className="h-4 w-4" />
-                <p className="text-sm font-medium">Unable to fetch news from: {failedSources.join(', ')}</p>
-              </div>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Loading news...</span>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center py-12 text-destructive">
-              <AlertTriangle className="h-6 w-6 mr-2" />
-              {error}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {sortedNews.map((item, index) => (
-                <motion.div
-                  key={item.link}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="group relative"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg" />
-                  <div className="relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-6 h-full">
-                    <div className="flex items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">{item.source}</span>
+          <div className="flex flex-col items-center gap-8 mb-8">
+            <div className="w-full max-w-4xl mx-auto">
+              <div className="bg-background/95 border border-border/20 rounded-xl p-6 shadow-lg backdrop-blur-md">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Search Bar */}
+                  <div className="col-span-1 sm:col-span-3">
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-primary/10 rounded-xl blur transition-all duration-300 group-focus-within:bg-primary/20" />
+                      <div className="relative flex items-center">
+                        <Search className="absolute left-4 h-5 w-5 text-primary/70 z-10 transition-colors group-focus-within:text-primary" />
+                        <input
+                          type="search"
+                          placeholder="Search articles by title or content..."
+                          className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-primary/20 bg-background/95 backdrop-blur-md shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary placeholder:text-muted-foreground/70 text-base"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          aria-label="Search articles"
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <h3 className="mb-2 line-clamp-2 text-xl font-semibold">
-                      {item.title}
-                    </h3>
-
-                    <div className="mb-4">
-                      <p className={`text-base text-muted-foreground ${
-                        expandedContent === item.link ? '' : 'line-clamp-3'
-                      }`}>
-                        {item.contentSnippet}
-                      </p>
-                      {item.contentSnippet && item.contentSnippet.length > 200 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-2 h-8 px-2 text-primary"
-                          onClick={() => setExpandedContent(
-                            expandedContent === item.link ? null : item.link
-                          )}
-                        >
-                          {expandedContent === item.link ? 'Show less' : 'Read more'}
-                        </Button>
-                      )}
-                    </div>
-
-                    {item.credibilityScore !== undefined ? (
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          {item.isFactual ? (
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-warning" />
-                          )}
-                          <span className="text-sm font-medium">
-                            Credibility Score: {item.credibilityScore}%
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        className="w-full mb-4 bg-primary/10 hover:bg-primary/20 text-primary"
-                        onClick={() => analyzeArticle(item)}
-                        disabled={analyzing}
-                      >
-                        {analyzing ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Brain className="mr-2 h-4 w-4" />
-                            Analyze Article
-                          </>
-                        )}
-                      </Button>
-                    )}
-
-                    {item.warnings && item.warnings.length > 0 && (
-                      <div className="mb-4 space-y-2">
-                        {item.warnings.map((warning, i) => (
-                          <p key={i} className="flex items-start gap-2 text-sm text-warning">
-                            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                            {warning}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between border-t border-border/50 pt-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        {format(new Date(item.pubDate), 'MMM d, yyyy')}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                      >
-                        <a 
-                          href={item.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1"
-                        >
-                          Read Full Article
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
                     </div>
                   </div>
-                </motion.div>
-              ))}
+
+                  {/* Category and Source Selects */}
+                  <div className="col-span-1">
+                    <ModernSelect
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      options={categoryOptions}
+                      placeholder="All Categories"
+                      ariaLabel="Select news category"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <ModernSelect
+                      value={selectedSource}
+                      onChange={(e) => setSelectedSource(e.target.value)}
+                      options={sourceOptions}
+                      placeholder="All Sources"
+                      ariaLabel="Select news source"
+                    />
+                  </div>
+
+                  {/* Refresh Button */}
+                  <div className="col-span-1 sm:col-span-3 flex justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={fetchNews}
+                      disabled={isRefreshing}
+                      className="h-12 px-6 rounded-xl shadow-md relative overflow-hidden group transition-all duration-300 hover:bg-primary/10"
+                      aria-label="Refresh news"
+                    >
+                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <motion.div
+                        animate={{ rotate: isRefreshing ? 360 : 0 }}
+                        transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: "linear" }}
+                        className="mr-2"
+                      >
+                        {isRefreshing ? (
+                          <Loader2 className="h-5 w-5 text-primary" />
+                        ) : (
+                          <RefreshCw className="h-5 w-5" />
+                        )}
+                      </motion.div>
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+
+            {failedSources.length > 0 && (
+              <div className="mb-6 rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+                <div className="flex items-center gap-2 text-warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <p className="text-sm font-medium">Unable to fetch news from: {failedSources.join(', ')}</p>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {Array(8).fill(0).map((_, index) => (
+                  <NewsCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-12 text-destructive">
+                <AlertTriangle className="h-6 w-6 mr-2" />
+                {error}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {paginatedNews.map((item, index) => (
+                    <Dialog key={`${item.link}-${index}`}>
+                      <DialogTrigger asChild>
+                        <motion.div
+                          variants={cardVariants}
+                          initial="initial"
+                          animate="animate"
+                          whileHover="hover"
+                          transition={{ delay: index * 0.1 }}
+                          className="group relative cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.currentTarget.click();
+                            }
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg shadow-md" />
+                          <div className="relative bg-background/95 border border-border/20 rounded-lg p-6 h-full shadow-lg hover:shadow-xl transition-all duration-300">
+                            {analyzingArticles.has(item.link) && (
+                              <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-4 mb-4">
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-medium text-foreground">{item.source}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className={`h-8 w-8 ${
+                                    speechState.isPlaying && speechState.currentArticleId === item.link
+                                      ? 'text-primary'
+                                      : 'text-foreground/70 hover:text-primary'
+                                  }`}
+                                  aria-label={
+                                    speechState.isPlaying && speechState.currentArticleId === item.link
+                                      ? 'Stop reading'
+                                      : 'Read article'
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    speak(
+                                      `${item.title}. ${item.contentSnippet}`,
+                                      item.link
+                                    );
+                                  }}
+                                >
+                                  {speechState.isPlaying && speechState.currentArticleId === item.link ? (
+                                    <VolumeX className="h-4 w-4" />
+                                  ) : (
+                                    <Volume2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-foreground/70 hover:text-primary" 
+                                  aria-label="Share article"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    shareArticle(item);
+                                  }}
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {item.thumbnail ? (
+                              <div className="mb-4">
+                                <img
+                                  src={item.thumbnail}
+                                  alt={`Thumbnail for ${item.title}`}
+                                  className="w-full h-40 object-cover rounded-md"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling.style.display = 'flex';
+                                  }}
+                                />
+                                <div className="hidden w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-md items-center justify-center">
+                                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <div className="flex items-center gap-2 mb-2">
+                              <Tag className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-primary font-medium">{item.category}</span>
+                            </div>
+
+                            <h3 className="mb-2 line-clamp-2 text-xl font-semibold text-foreground">
+                              {item.title}
+                            </h3>
+
+                            <div className="mb-4">
+                              <p className="text-base text-muted-foreground line-clamp-3">
+                                {item.contentSnippet}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-border/20 pt-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                {format(new Date(item.pubDate), 'MMM d, yyyy')}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="flex items-center gap-1 text-primary hover:text-primary/80"
+                                aria-label="Read more about this article"
+                              >
+                                Read More
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </DialogTrigger>
+
+                      <DialogContent className="max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="text-2xl mb-4">{item.title}</DialogTitle>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-4 w-4" />
+                              {item.source}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              {format(new Date(item.pubDate), 'MMMM d, yyyy')}
+                            </div>
+                          </div>
+                        </DialogHeader>
+
+                        <div className="space-y-6">
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className={`${
+                                    speechState.isPlaying && speechState.currentArticleId === item.link
+                                      ? 'text-primary'
+                                      : 'text-foreground/70 hover:text-primary'
+                                  }`}
+                                  aria-label={
+                                    speechState.isPlaying && speechState.currentArticleId === item.link
+                                      ? 'Stop reading'
+                                      : 'Read article'
+                                  }
+                                  onClick={() => {
+                                    speak(
+                                      `${item.title}. ${item.contentSnippet}`,
+                                      item.link
+                                    );
+                                  }}
+                                >
+                                  {speechState.isPlaying && speechState.currentArticleId === item.link ? (
+                                    <VolumeX className="h-4 w-4 mr-2" />
+                                  ) : (
+                                    <Volume2 className="h-4 w-4 mr-2" />
+                                  )}
+                                  {speechState.isPlaying && speechState.currentArticleId === item.link ? 'Stop Reading' : 'Read Aloud'}
+                                </Button>
+                              </div>
+                            </div>
+                            {item.contentSnippet}
+                          </div>
+
+                          {item.credibilityScore !== undefined ? (
+                            <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-semibold">Analysis Results</h4>
+                                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+                                  item.isFactual 
+                                    ? 'bg-success/10 text-success' 
+                                    : 'bg-warning/10 text-warning'
+                                }`}>
+                                  {item.isFactual ? (
+                                    <CheckCircle className="h-4 w-4" />
+                                  ) : (
+                                    <AlertTriangle className="h-4 w-4" />
+                                  )}
+                                  Credibility Score: {item.credibilityScore}%
+                                </span>
+                              </div>
+
+                              {item.warnings && item.warnings.length > 0 && (
+                                <div className="space-y-2">
+                                  <h5 className="font-medium text-sm">Warnings</h5>
+                                  {item.warnings.map((warning, i) => (
+                                    <p key={i} className="flex items-start gap-2 text-sm text-warning">
+                                      <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                      {warning}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <Button
+                              className="w-full bg-primary/10 hover:bg-primary/20 text-primary"
+                              onClick={() => analyzeArticle(item)}
+                              disabled={analyzingArticles.has(item.link)}
+                            >
+                              {analyzingArticles.has(item.link) ? (
+                                <>
+                                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <Brain className="mr-2 h-4 w-4" />
+                                  Analyze Article
+                                </>
+                              )}
+                            </Button>
+                          )}
+
+                          <div className="flex justify-between items-center pt-4 border-t border-border">
+                            <Button variant="outline" size="sm" asChild>
+                              <a 
+                                href={item.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2"
+                              >
+                                Visit Source
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => shareArticle(item)}
+                            >
+                              <Share2 className="h-4 w-4 mr-2" />
+                              Share
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  ))}
+                </div>
+
+                {hasMore && (
+                  <div className="flex justify-center mt-8">
+                    <Button
+                      onClick={() => setPage(prev => prev + 1)}
+                      className="bg-primary text-white hover:bg-primary/90"
+                    >
+                      Load More
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
