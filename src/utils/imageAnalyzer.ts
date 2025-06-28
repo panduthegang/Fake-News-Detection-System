@@ -26,14 +26,44 @@ export const analyzeImage = async (imageData: string): Promise<AnalysisResult> =
       }
     };
 
-    // First, extract text from the image
-    const extractionPrompt = `Extract all readable text from this image. Format it naturally with proper paragraphs and line breaks. Only include the actual text content, no descriptions or explanations.`;
+    // First, extract text from the image with improved formatting
+    const extractionPrompt = `Extract all readable text from this image. Format the text with these rules:
+    1. Preserve all paragraphs and line breaks
+    2. Maintain proper spacing between sections
+    3. Keep any headings or titles on separate lines
+    4. Preserve any lists or bullet points
+    5. Keep numbers, dates, and special characters intact
+    6. Only include the actual text content, no descriptions or explanations
+    7. Use proper punctuation and formatting`;
     
     const extractionResult = await model.generateContent([extractionPrompt, imageFile]);
-    const extractedText = extractionResult.response.text();
+    let extractedText = extractionResult.response.text();
 
-    // Now analyze the extracted text
-    const analysisPrompt = `Analyze this article text in ${i18n.language === 'hi' ? 'Hindi' : 'English'} language. Provide a detailed analysis including credibility assessment, fact-checking, and content evaluation.
+    // If language is Hindi, translate the extracted text
+    if (i18n.language === 'hi') {
+      const translationPrompt = `Translate the following English text to Hindi. Follow these rules:
+      1. Maintain all paragraph breaks and formatting
+      2. Keep numbers, dates, and proper nouns as is
+      3. Use proper Hindi punctuation (like । for full stops)
+      4. Preserve any headings or section breaks
+      5. Keep the same text structure and layout
+      
+Here's the text to translate:
+
+${extractedText}`;
+
+      const translationResult = await model.generateContent(translationPrompt);
+      extractedText = translationResult.response.text();
+    }
+
+    // Clean up the extracted text
+    extractedText = extractedText
+      .replace(/\n{3,}/g, '\n\n') // Replace multiple line breaks with double line breaks
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim(); // Remove leading/trailing whitespace
+
+    // Now analyze the text in the selected language
+    const analysisPrompt = `Analyze this article text in ${i18n.language === 'hi' ? 'Hindi' : 'English'} language. ${i18n.language === 'hi' ? 'Provide all analysis output in Hindi.' : ''} Provide a detailed analysis including credibility assessment, fact-checking, and content evaluation.
 
 Your response must be a valid JSON object with this exact structure:
 {
@@ -70,7 +100,7 @@ Text to analyze: "${extractedText}"`;
 
       // Calculate basic statistics
       const words = extractedText.trim().split(/\s+/);
-      const sentences = extractedText.split(/[.!?]+/).filter(Boolean);
+      const sentences = extractedText.split(/[.!?।]+/).filter(Boolean); // Added Devanagari danda for Hindi
       const paragraphs = extractedText.split(/\n\s*\n/).filter(Boolean);
       
       const statistics = {
@@ -113,15 +143,34 @@ Text to analyze: "${extractedText}"`;
   }
 };
 
-// Helper function to extract keywords
+// Helper function to extract keywords - Updated for Hindi support
 function extractKeywords(text: string): string[] {
-  const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with']);
-  const words = text.toLowerCase().split(/\W+/);
+  const isHindi = i18n.language === 'hi';
+  
+  // Hindi stop words
+  const hindiStopWords = new Set([
+    'का', 'की', 'के', 'एक', 'में', 'है', 'हैं', 'को', 'पर', 'इस', 'से', 'और',
+    'या', 'हो', 'था', 'थी', 'थे', 'कि', 'जो', 'कर', 'यह', 'वह', 'ने', 'बहुत',
+    'सभी', 'कुछ', 'अब', 'जब', 'तक', 'तब', 'या', 'एवं', 'यदि', 'भी'
+  ]);
+
+  // English stop words
+  const englishStopWords = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+    'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
+    'will', 'with'
+  ]);
+
+  const stopWords = isHindi ? hindiStopWords : englishStopWords;
+  
+  // Split text into words - handle both scripts
+  const words = text.split(/[\s,।]+/);
   const wordFreq: Record<string, number> = {};
   
   words.forEach(word => {
-    if (word.length > 3 && !stopWords.has(word)) {
-      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    const cleanWord = word.toLowerCase().trim();
+    if (cleanWord.length > 1 && !stopWords.has(cleanWord)) {
+      wordFreq[cleanWord] = (wordFreq[cleanWord] || 0) + 1;
     }
   });
   
@@ -131,14 +180,22 @@ function extractKeywords(text: string): string[] {
     .map(([word]) => word);
 }
 
-// Helper function to count emotional words
+// Helper function to count emotional words - Updated for Hindi support
 function countEmotionalWords(text: string, type: 'positive' | 'negative' | 'urgent'): number {
+  const isHindi = i18n.language === 'hi';
+  
   const emotionalWords = {
-    positive: ['good', 'great', 'excellent', 'amazing', 'wonderful', 'positive', 'success', 'breakthrough'],
-    negative: ['bad', 'terrible', 'awful', 'horrible', 'poor', 'negative', 'failure', 'crisis'],
-    urgent: ['breaking', 'urgent', 'emergency', 'crisis', 'immediately', 'critical', 'vital', 'crucial']
+    positive: isHindi ? 
+      ['अच्छा', 'बेहतर', 'उत्कृष्ट', 'अद्भुत', 'शानदार', 'सकारात्मक', 'सफलता', 'प्रगति'] :
+      ['good', 'great', 'excellent', 'amazing', 'wonderful', 'positive', 'success', 'breakthrough'],
+    negative: isHindi ?
+      ['बुरा', 'खराब', 'भयानक', 'घटिया', 'नकारात्मक', 'असफलता', 'संकट', 'समस्या'] :
+      ['bad', 'terrible', 'awful', 'horrible', 'poor', 'negative', 'failure', 'crisis'],
+    urgent: isHindi ?
+      ['तत्काल', 'जरूरी', 'आपातकालीन', 'संकट', 'तुरंत', 'महत्वपूर्ण', 'आवश्यक', 'गंभीर'] :
+      ['breaking', 'urgent', 'emergency', 'crisis', 'immediately', 'critical', 'vital', 'crucial']
   };
   
-  const words = text.toLowerCase().split(/\W+/);
+  const words = text.toLowerCase().split(/[\s,।]+/);
   return words.filter(word => emotionalWords[type].includes(word)).length;
 }

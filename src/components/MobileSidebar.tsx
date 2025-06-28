@@ -37,7 +37,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       </SheetTrigger>
       <SheetContent side="left" className="w-72 bg-background/60 backdrop-blur-xl backdrop-saturate-150 border-r border-border/40">
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="border-b border-border/40 pb-4 mb-4">
             <SheetTitle className="flex items-center gap-2 px-2">
               <Zap className="h-5 w-5 text-primary" />
@@ -45,7 +44,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             </SheetTitle>
           </div>
 
-          {/* Navigation */}
           <div className="flex-1 px-2">
             <div className="space-y-1">
               {isAnalyzerVisible && (
@@ -65,7 +63,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
                   className="w-full justify-start gap-2 h-11"
                   asChild
                 >
-                  <Link to="/home-page" state={{ skipLanding: true }}>
+                  <Link to="/">
                     <Home className="h-4 w-4" />
                     News Analyzer
                   </Link>
@@ -138,7 +136,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             </div>
           </div>
 
-          {/* Footer */}
           <div className="mt-auto border-t border-border/40">
             <div className="px-2 py-4">
               <p className="text-xs text-muted-foreground">

@@ -33,6 +33,7 @@ export const HomePage: React.FC = () => {
   const [comparisonTexts, setComparisonTexts] = useState<string[]>([]);
   const [comparisonResults, setComparisonResults] = useState<AnalysisResult[]>([]);
   const [showAnalyzer, setShowAnalyzer] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [sparkles, setSparkles] = useState([]);
 
   useEffect(() => {
@@ -40,7 +41,19 @@ export const HomePage: React.FC = () => {
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
     }
+
+    const skipLanding = localStorage.getItem('skipLanding') === 'true';
+    if (skipLanding) {
+      setShowLanding(false);
+      setShowAnalyzer(true);
+    }
   }, []);
+
+  const handleStartAnalyzing = () => {
+    setShowLanding(false);
+    setShowAnalyzer(true);
+    localStorage.setItem('skipLanding', 'true');
+  };
 
   useEffect(() => {
     const generateSparkles = () => {
@@ -244,8 +257,8 @@ export const HomePage: React.FC = () => {
         ))}
       </div>
 
-      {!showAnalyzer ? (
-        <LandingPage onStartAnalyzing={() => setShowAnalyzer(true)} />
+      {showLanding && !showAnalyzer ? (
+        <LandingPage onStartAnalyzing={handleStartAnalyzing} />
       ) : (
         <AnimatePresence>
           <motion.div
@@ -264,7 +277,11 @@ export const HomePage: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowAnalyzer(false)}
+                    onClick={() => {
+                      setShowAnalyzer(false);
+                      setShowLanding(true);
+                      localStorage.removeItem('skipLanding');
+                    }}
                     className="absolute left-0 top-0 hidden md:flex items-center gap-2 text-muted-foreground hover:text-foreground"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -308,7 +325,11 @@ export const HomePage: React.FC = () => {
                       <MobileSidebar
                         showHistory={showHistory}
                         onHistoryClick={() => setShowHistory(!showHistory)}
-                        onBackHome={() => setShowAnalyzer(false)}
+                        onBackHome={() => {
+                          setShowAnalyzer(false);
+                          setShowLanding(true);
+                          localStorage.removeItem('skipLanding');
+                        }}
                       />
                     </div>
                   </div>
