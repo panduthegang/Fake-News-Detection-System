@@ -43,7 +43,7 @@ const teamMembers: TeamMember[] = [
     bio: 'Designs and trains AI models for credibility scoring and misinformation detection.',
     social: {
       linkedin: 'https://linkedin.com',
-      github: 'https://github.com',
+      github: 'https://github.com/ailuropix',
       email: 'mailto:pooja@verifai.ai'
     }
   },
@@ -54,7 +54,7 @@ const teamMembers: TeamMember[] = [
     bio: 'Ensures data quality and generates insightful reports.',
     social: {
       linkedin: 'https://linkedin.com',
-      github: 'https://github.com',
+      github: 'https://github.com/18-saurabh',
       email: 'mailto:saurabh@verifai.ai'
     }
   },
@@ -65,7 +65,7 @@ const teamMembers: TeamMember[] = [
     bio: 'Crafts intuitive and responsive interfaces.',
     social: {
       linkedin: 'https://linkedin.com',
-      github: 'https://github.com',
+      github: 'https://github.com/SaachiDesai',
       email: 'mailto:saachi@verifai.ai'
     }
   }
